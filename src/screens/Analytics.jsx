@@ -262,11 +262,13 @@ export default function Analytics() {
                   const y1 = 85 - (prev.income / yScale) * 70;
                   const y2 = 85 - (day.income / yScale) * 70;
                   return (
-                    <polyline
+                    <line
                       // eslint-disable-next-line react/no-array-index-key
                       key={`income-line-${idx}`}
-                      points={`${x1} ${y1}, ${x2} ${y2}`}
-                      fill="none"
+                      x1={`${x1}%`}
+                      y1={`${y1}%`}
+                      x2={`${x2}%`}
+                      y2={`${y2}%`}
                       stroke="#10b981"
                       strokeWidth="2.25"
                       strokeLinecap="round"
@@ -282,11 +284,13 @@ export default function Analytics() {
                   const y1 = 85 - (prev.spend / yScale) * 70;
                   const y2 = 85 - (day.spend / yScale) * 70;
                   return (
-                    <polyline
+                    <line
                       // eslint-disable-next-line react/no-array-index-key
                       key={`spend-line-${idx}`}
-                      points={`${x1} ${y1}, ${x2} ${y2}`}
-                      fill="none"
+                      x1={`${x1}%`}
+                      y1={`${y1}%`}
+                      x2={`${x2}%`}
+                      y2={`${y2}%`}
                       stroke="#f43f5e"
                       strokeWidth="2.25"
                       strokeLinecap="round"

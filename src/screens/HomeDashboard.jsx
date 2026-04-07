@@ -244,10 +244,12 @@ export default function HomeDashboard() {
                   const y1 = 85 - (prev.total / yScale) * 60;
                   const y2 = 85 - (day.total / yScale) * 60;
                   return (
-                    <polyline
+                    <line
                       key={day.key}
-                      points={`${x1} ${y1}, ${x2} ${y2}`}
-                      fill="none"
+                      x1={`${x1}%`}
+                      y1={`${y1}%`}
+                      x2={`${x2}%`}
+                      y2={`${y2}%`}
                       stroke="#06a750"
                       strokeWidth="2.5"
                       strokeLinecap="round"
