@@ -1,0 +1,8 @@
+{
+  "appId": "com.duitflow.app",
+  "appName": "DuitFlow",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
