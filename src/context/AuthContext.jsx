@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   const updateUserLimit = async (newLimit) => {
     if (!user) return;
     try {
-      const apiBase = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
+      const apiBase = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`);
       const response = await fetch(`${apiBase}/users/${user.id}/limit`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
