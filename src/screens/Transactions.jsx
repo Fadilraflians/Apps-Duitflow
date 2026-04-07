@@ -110,13 +110,15 @@ export default function Transactions() {
                 const x1 = xAt(idx - 1, monthlySeries.length);
                 const x2 = xAt(idx, monthlySeries.length);
                 const yScale = maxMonthly || 1;
-                const y1 = 100 - (prev.income / yScale) * 75;
-                const y2 = 100 - (m.income / yScale) * 75;
+                const y1 = 85 - (prev.income / yScale) * 75;
+                const y2 = 85 - (m.income / yScale) * 75;
                 return (
-                  <polyline
+                  <line
                     key={`income-${m.key}`}
-                    points={`${x1} ${y1}, ${x2} ${y2}`}
-                    fill="none"
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
                     stroke="#10b981"
                     strokeWidth="2.25"
                     strokeLinecap="round"
@@ -129,13 +131,15 @@ export default function Transactions() {
                 const x1 = xAt(idx - 1, monthlySeries.length);
                 const x2 = xAt(idx, monthlySeries.length);
                 const yScale = maxMonthly || 1;
-                const y1 = 100 - (prev.spend / yScale) * 75;
-                const y2 = 100 - (m.spend / yScale) * 75;
+                const y1 = 85 - (prev.spend / yScale) * 75;
+                const y2 = 85 - (m.spend / yScale) * 75;
                 return (
-                  <polyline
+                  <line
                     key={`spend-${m.key}`}
-                    points={`${x1} ${y1}, ${x2} ${y2}`}
-                    fill="none"
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
                     stroke="#f43f5e"
                     strokeWidth="2.25"
                     strokeLinecap="round"
@@ -145,8 +149,8 @@ export default function Transactions() {
               {monthlySeries.map((m, idx) => {
                 const x = xAt(idx, monthlySeries.length);
                 const yScale = maxMonthly || 1;
-                const yIncome = 100 - (m.income / yScale) * 75;
-                const ySpend = 100 - (m.spend / yScale) * 75;
+                const yIncome = 85 - (m.income / yScale) * 75;
+                const ySpend = 85 - (m.spend / yScale) * 75;
                 return (
                   <g key={`m-dot-${m.key}`}>
                     <circle
