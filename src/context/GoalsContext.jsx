@@ -7,8 +7,8 @@ export const GoalsProvider = ({ children }) => {
   const [goals, setGoals] = useState([]);
   const { user } = useContext(AuthContext);
 
-  const getApiBase = () => `http://${window.location.hostname}:5000/api`;
-  const getApiUrl = () => `http://${window.location.hostname}:5000/api/goals`;
+  const getApiBase = () => import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
+  const getApiUrl = () => `${getApiBase()}/goals`;
 
   useEffect(() => {
     const fetchGoals = async () => {

@@ -8,7 +8,7 @@ export const FinanceProvider = ({ children }) => {
   const [wallet, setWallet] = useState({ bca_balance: 0, cash_balance: 0 });
   const { user } = useContext(AuthContext);
 
-  const getApiBase = () => `http://${window.location.hostname}:5000/api`;
+  const getApiBase = () => import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`;
   const ACCOUNT_OVERRIDE_KEY = 'duitflow_account_type_overrides_v1';
   const readAccountOverrides = () => {
     try {

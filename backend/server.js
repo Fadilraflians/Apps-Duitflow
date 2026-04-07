@@ -2,16 +2,24 @@ import express from 'express';
 import mysql from 'mysql2/promise';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import fs from 'fs';
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'duitflow'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'duitflow',
+  port: parseInt(process.env.DB_PORT) || 3306,
+  ssl: process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud') ? {
+    rejectUnauthorized: true,
+  } : undefined
 };
 
 // --- AUTH ROUTES ---
