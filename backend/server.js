@@ -18,7 +18,7 @@ const dbConfig = {
   database: process.env.DB_NAME || 'duitflow',
   port: parseInt(process.env.DB_PORT) || 3306,
   ssl: process.env.DB_HOST && process.env.DB_HOST.includes('aivencloud') ? {
-    rejectUnauthorized: true,
+    rejectUnauthorized: false
   } : undefined
 };
 
@@ -99,7 +99,7 @@ app.post('/api/login', async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Server error during login' });
+    res.status(500).json({ error: 'Server error during login', details: String(error) });
   }
 });
 
