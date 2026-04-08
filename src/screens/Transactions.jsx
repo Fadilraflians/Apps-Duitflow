@@ -1,10 +1,11 @@
-import React, { useContext, useMemo } from 'react';
+import React, { useContext, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinanceContext } from '../context/FinanceContext';
 import BottomNavBar from '../components/BottomNavBar';
 
 export default function Transactions() {
   const { transactions } = useContext(FinanceContext);
+  const [activeChart, setActiveChart] = useState('income');
   const navigate = useNavigate();
   const accountLabel = (tx) =>
     String(tx.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA';
@@ -81,113 +82,102 @@ export default function Transactions() {
 
       <main className="px-6 max-w-3xl mx-auto mt-4 space-y-6">
         {/* Monthly Chart */}
+        {/* Monthly Chart */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-[0_8px_24px_rgba(0,0,0,0.04)] dark:border dark:border-slate-800">
-          <div className="flex justify-between items-center mb-3">
-            <div>
-              <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-base">Grafik Pengeluaran Bulanan</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Perbandingan uang masuk dan spend 3 bulan terakhir (termasuk bulan ini).
-              </p>
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg mb-6">
+            <button 
+              onClick={() => setActiveChart('income')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeChart === 'income' ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            >
+              Uang Masuk
+            </button>
+            <button 
+              onClick={() => setActiveChart('spend')}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeChart === 'spend' ? 'bg-white dark:bg-slate-900 text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            >
+              Uang Keluar
+            </button>
+          </div>
+
+          {activeChart === 'income' ? (
+            <div className="animate-in fade-in zoom-in-95 duration-300">
+              <div className="mb-4">
+                <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-base">Grafik Uang Masuk Bulanan</h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Total uang masuk 3 bulan terakhir.</p>
+              </div>
+              <div className="relative h-40 mt-4 max-w-full overflow-hidden">
+                <svg className="absolute inset-0 w-full h-full overflow-visible">
+                  <line x1="8%" y1="85%" x2="94%" y2="85%" stroke="rgba(148,163,184,0.28)" strokeWidth="1" />
+                  {monthlySeries.map((m, idx) => {
+                    if (idx === 0) return null;
+                    const prev = monthlySeries[idx - 1];
+                    const x1 = xAt(idx - 1, monthlySeries.length);
+                    const x2 = xAt(idx, monthlySeries.length);
+                    const yScale = Math.max(...monthlySeries.map(x=>x.income)) || 1;
+                    const y1 = 85 - (prev.income / yScale) * 75;
+                    const y2 = 85 - (m.income / yScale) * 75;
+                    return (
+                      <line key={`income-${m.key}`} x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} stroke="#10b981" strokeWidth="2.25" strokeLinecap="round" />
+                    );
+                  })}
+                  {monthlySeries.map((m, idx) => {
+                    const x = xAt(idx, monthlySeries.length);
+                    const yScale = Math.max(...monthlySeries.map(x=>x.income)) || 1;
+                    const yIncome = 85 - (m.income / yScale) * 75;
+                    const displayIncome = m.income >= 1000000 ? (m.income / 1000000).toFixed(1).replace('.0', '') + 'M' : (m.income >= 1000 ? (m.income / 1000).toFixed(0) + 'k' : (m.income > 0 ? m.income.toString() : ''));
+                    return (
+                      <g key={`minc-dot-${m.key}`}>
+                        {displayIncome && <text x={`${x}%`} y={`${yIncome - 8}%`} textAnchor="middle" fill="#10b981" fontSize="9" fontWeight="bold" className="dark:fill-emerald-400 select-none pointer-events-none drop-shadow-sm">{displayIncome}</text>}
+                        <circle cx={`${x}%`} cy={`${yIncome}%`} r="3.5" fill="#10b981" stroke="#ecfdf5" strokeWidth="1.5"><title>{`${m.label} Income: ${formatIDR(m.income)}`}</title></circle>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                  {monthlySeries.map((m) => <span key={`mil-${m.key}`}>{m.label}</span>)}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4 text-[11px] font-bold mb-2">
-            <span className="inline-flex items-center gap-1 text-emerald-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Income</span>
-            <span className="inline-flex items-center gap-1 text-rose-600"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" />Spend</span>
-          </div>
-          <div className="relative h-40 mt-4">
-            <svg className="absolute inset-0 w-full h-full">
-              <line
-                x1="8%"
-                y1="85%"
-                x2="94%"
-                y2="85%"
-                stroke="rgba(148,163,184,0.28)"
-                strokeWidth="1"
-              />
-              {monthlySeries.map((m, idx) => {
-                if (idx === 0) return null;
-                const prev = monthlySeries[idx - 1];
-                const x1 = xAt(idx - 1, monthlySeries.length);
-                const x2 = xAt(idx, monthlySeries.length);
-                const yScale = maxMonthly || 1;
-                const y1 = 85 - (prev.income / yScale) * 75;
-                const y2 = 85 - (m.income / yScale) * 75;
-                return (
-                  <line
-                    key={`income-${m.key}`}
-                    x1={`${x1}%`}
-                    y1={`${y1}%`}
-                    x2={`${x2}%`}
-                    y2={`${y2}%`}
-                    stroke="#10b981"
-                    strokeWidth="2.25"
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-              {monthlySeries.map((m, idx) => {
-                if (idx === 0) return null;
-                const prev = monthlySeries[idx - 1];
-                const x1 = xAt(idx - 1, monthlySeries.length);
-                const x2 = xAt(idx, monthlySeries.length);
-                const yScale = maxMonthly || 1;
-                const y1 = 85 - (prev.spend / yScale) * 75;
-                const y2 = 85 - (m.spend / yScale) * 75;
-                return (
-                  <line
-                    key={`spend-${m.key}`}
-                    x1={`${x1}%`}
-                    y1={`${y1}%`}
-                    x2={`${x2}%`}
-                    y2={`${y2}%`}
-                    stroke="#f43f5e"
-                    strokeWidth="2.25"
-                    strokeLinecap="round"
-                  />
-                );
-              })}
-              {monthlySeries.map((m, idx) => {
-                const x = xAt(idx, monthlySeries.length);
-                const yScale = maxMonthly || 1;
-                const yIncome = 85 - (m.income / yScale) * 75;
-                const ySpend = 85 - (m.spend / yScale) * 75;
-                return (
-                  <g key={`m-dot-${m.key}`}>
-                    <circle
-                      cx={`${x}%`}
-                      cy={`${yIncome}%`}
-                      r="4"
-                      fill={idx === monthlySeries.length - 1 ? '#059669' : '#10b981'}
-                      stroke="#ecfdf5"
-                      strokeWidth="1.5"
-                    >
-                      <title>{`${m.label} Income: ${formatIDR(m.income)}`}</title>
-                    </circle>
-                    <circle
-                      cx={`${x}%`}
-                      cy={`${ySpend}%`}
-                      r="4"
-                      fill="#f43f5e"
-                      stroke="#fff1f2"
-                      strokeWidth="1.5"
-                    >
-                      <title>{`${m.label} Spend: ${formatIDR(m.spend)}`}</title>
-                    </circle>
-                  </g>
-                );
-              })}
-            </svg>
-            <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
-              {monthlySeries.map((m) => (
-                <span key={`m-label-${m.key}`}>{m.label}</span>
-              ))}
+          ) : (
+            <div className="animate-in fade-in zoom-in-95 duration-300">
+              <div className="mb-4">
+                <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-base">Grafik Uang Keluar Bulanan</h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Total pengeluaran 3 bulan terakhir.</p>
+              </div>
+              <div className="relative h-40 mt-4 max-w-full overflow-hidden">
+                <svg className="absolute inset-0 w-full h-full overflow-visible">
+                  <line x1="8%" y1="85%" x2="94%" y2="85%" stroke="rgba(148,163,184,0.28)" strokeWidth="1" />
+                  {monthlySeries.map((m, idx) => {
+                    if (idx === 0) return null;
+                    const prev = monthlySeries[idx - 1];
+                    const x1 = xAt(idx - 1, monthlySeries.length);
+                    const x2 = xAt(idx, monthlySeries.length);
+                    const yScale = Math.max(...monthlySeries.map(x=>x.spend)) || 1;
+                    const y1 = 85 - (prev.spend / yScale) * 75;
+                    const y2 = 85 - (m.spend / yScale) * 75;
+                    return (
+                      <line key={`spend-${m.key}`} x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} stroke="#f43f5e" strokeWidth="2.25" strokeLinecap="round" />
+                    );
+                  })}
+                  {monthlySeries.map((m, idx) => {
+                    const x = xAt(idx, monthlySeries.length);
+                    const yScale = Math.max(...monthlySeries.map(x=>x.spend)) || 1;
+                    const ySpend = 85 - (m.spend / yScale) * 75;
+                    const displaySpend = m.spend >= 1000000 ? (m.spend / 1000000).toFixed(1).replace('.0', '') + 'M' : (m.spend >= 1000 ? (m.spend / 1000).toFixed(0) + 'k' : (m.spend > 0 ? m.spend.toString() : ''));
+                    return (
+                      <g key={`msp-dot-${m.key}`}>
+                        {displaySpend && <text x={`${x}%`} y={`${ySpend - 8}%`} textAnchor="middle" fill="#f43f5e" fontSize="9" fontWeight="bold" className="dark:fill-rose-400 select-none pointer-events-none drop-shadow-sm">{displaySpend}</text>}
+                        <circle cx={`${x}%`} cy={`${ySpend}%`} r="3.5" fill="#f43f5e" stroke="#fff1f2" strokeWidth="1.5"><title>{`${m.label} Spend: ${formatIDR(m.spend)}`}</title></circle>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                  {monthlySeries.map((m) => <span key={`msl-${m.key}`}>{m.label}</span>)}
+                </div>
+              </div>
             </div>
-          </div>
-          <p className="text-[11px] mt-3 text-slate-500 dark:text-slate-400">
-            {maxMonthly > 0
-              ? 'Hijau = uang masuk, merah = uang keluar (spend).'
-              : 'Belum ada data pencatatan transaksi.'}
-          </p>
+          )}
         </section>
 
         {/* Transactions Table/List */}
