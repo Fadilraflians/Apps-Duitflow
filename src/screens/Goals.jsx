@@ -104,72 +104,69 @@ export default function Goals() {
 
         {/* Priority Goal */}
         {priorityGoal && (
-          <section className="mb-8 sm:mb-12 relative">
-            <div className="bg-white/95 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-8 shadow-[0_10px_28px_rgba(0,0,0,0.06)] relative overflow-hidden">
-              <div className="absolute -top-12 -right-12 w-48 h-48 bg-gradient-to-br from-[#6bff8f] to-[#00dcfe] opacity-10 rounded-full blur-3xl"></div>
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-8 relative z-10">
+          <section className="mb-8 sm:mb-12 relative group transform hover:scale-[1.01] transition-all duration-300">
+            <div className="bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative overflow-hidden">
+              {/* Decorative Glows */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/20 transition-all duration-700 pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 relative z-10">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="bg-tertiary/10 text-tertiary px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Active Priority</span>
+                    <span className="bg-white/20 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></span> Active Priority</span>
                   </div>
-                  <h2 className="font-headline text-xl sm:text-2xl font-bold text-on-surface mb-1">{priorityGoal.title}</h2>
-                  <p className="font-body text-sm text-on-surface-variant mb-6">{priorityGoal.description}</p>
+                  <h2 className="font-headline text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight drop-shadow-md">{priorityGoal.title}</h2>
+                  <p className="font-body text-sm text-emerald-50 dark:text-slate-300 opacity-90 mb-6">{priorityGoal.description}</p>
 
                   <div className="space-y-4">
                     <div className="flex justify-between items-end">
                       <div>
-                        <span className="font-label text-[10px] font-bold uppercase tracking-widest text-outline mb-1 block">Saved so far</span>
-                        <span className="font-headline text-2xl sm:text-3xl font-extrabold text-primary">{formatIDR(priorityGoal.saved_amount)}</span>
+                        <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-100/80 mb-1 block">Saved so far</span>
+                        <span className="font-headline text-2xl sm:text-4xl font-extrabold text-white drop-shadow-sm">{formatIDR(priorityGoal.saved_amount)}</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-label text-[10px] font-bold uppercase tracking-widest text-outline mb-1 block">Target</span>
-                        <span className="font-headline text-base sm:text-lg font-bold text-on-surface">{formatIDR(priorityGoal.target_amount)}</span>
+                        <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-100/80 mb-1 block">Target</span>
+                        <span className="font-headline text-base sm:text-xl font-bold text-emerald-50">{formatIDR(priorityGoal.target_amount)}</span>
                       </div>
                     </div>
                     {/* Progress Bar */}
-                    <div className="h-3 w-full bg-surface-container rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${Math.min((priorityGoal.saved_amount / priorityGoal.target_amount) * 100, 100)}%` }}></div>
+                    <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden border border-white/10 shadow-inner">
+                      <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min((priorityGoal.saved_amount / priorityGoal.target_amount) * 100, 100)}%` }}></div>
                     </div>
                   </div>
                 </div>
 
                 {/* Circular Visualization */}
-                <div className="flex flex-col items-center justify-center gap-4 self-center">
-                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-4 self-center pt-2 md:pt-0">
+                  <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
                     <svg className="w-full h-full -rotate-90">
-                      <circle className="text-surface-container" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" strokeWidth="8"></circle>
-                      <circle cx="64" cy="64" fill="transparent" r="58" stroke="url(#gradient)" 
-                        strokeDasharray="364.4" 
-                        strokeDashoffset={364.4 - (Math.min((priorityGoal.saved_amount / priorityGoal.target_amount), 1) * 364.4)} 
+                      <circle className="text-black/10" cx="72" cy="72" fill="transparent" r="64" stroke="currentColor" strokeWidth="8"></circle>
+                      <circle cx="72" cy="72" fill="transparent" r="64" stroke="white" 
+                        strokeDasharray="402" 
+                        strokeDashoffset={402 - (Math.min((priorityGoal.saved_amount / priorityGoal.target_amount), 1) * 402)} 
                         strokeLinecap="round" strokeWidth="8"></circle>
-                      <defs>
-                        <linearGradient id="gradient" x1="0%" x2="100%" y1="0%" y2="100%">
-                          <stop offset="0%" stopColor="#006a2d"></stop>
-                          <stop offset="100%" stopColor="#6bff8f"></stop>
-                        </linearGradient>
-                      </defs>
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="font-headline text-lg sm:text-xl font-extrabold text-on-surface">{Math.round((priorityGoal.saved_amount / priorityGoal.target_amount) * 100)}%</span>
-                      <span className="font-label text-[8px] font-bold uppercase tracking-tighter text-outline">Progress</span>
+                      <span className="font-headline text-2xl sm:text-3xl font-extrabold text-white drop-shadow-md">{Math.round((priorityGoal.saved_amount / priorityGoal.target_amount) * 100)}%</span>
+                      <span className="font-label text-[9px] font-bold uppercase tracking-tighter text-emerald-100/80">Progress</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t border-surface-container flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-md bg-primary-container/20 flex items-center justify-center text-primary overflow-hidden">
-                    <span className="material-symbols-outlined text-xl leading-none">{getSafeIcon(priorityGoal.icon)}</span>
+              <div className="relative z-10 mt-8 pt-6 border-t border-white/15 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-inner transform group-hover:rotate-6 transition-transform duration-300">
+                    <span className="material-symbols-outlined text-2xl opacity-90">{getSafeIcon(priorityGoal.icon)}</span>
                   </div>
                   <div>
-                    <span className="font-label text-[10px] font-bold uppercase tracking-widest text-outline block">Active</span>
-                    <span className="font-body text-sm font-bold text-on-surface">Saving Mode</span>
+                    <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-100/80 block">Active Status</span>
+                    <span className="font-body text-sm font-bold text-white tracking-wide">Saving Mode</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => openFundModal(priorityGoal)}
-                  className="bg-primary text-on-primary px-4 sm:px-6 py-2.5 rounded-full font-label text-[11px] sm:text-xs font-bold tracking-widest uppercase hover:bg-primary-dim transition-colors shadow-lg shadow-primary/20 whitespace-nowrap"
+                  className="bg-white text-emerald-800 dark:bg-emerald-400 dark:text-slate-900 px-5 sm:px-6 py-2.5 rounded-full font-label text-[10px] sm:text-xs font-extrabold tracking-widest uppercase hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-900/20 whitespace-nowrap"
                 >
                   Add Funds
                 </button>

@@ -60,19 +60,28 @@ export default function Profile() {
         </section>
 
         {/* Subscription Card  */}
-        <section className="mb-8">
-          <div className="bg-primary text-on-primary p-6 rounded-2xl relative overflow-hidden flex flex-col justify-between h-40 shadow-xl shadow-primary/15">
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary-container/20 rounded-full blur-3xl"></div>
-            <div className="z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-primary-fixed" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-                <h2 className="text-xl font-bold font-headline">{firstName}&apos;s Premium</h2>
+        <section className="mb-8 group transform hover:scale-[1.01] transition-all duration-300">
+          <div className="bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white p-6 sm:p-8 rounded-3xl relative overflow-hidden flex flex-col justify-between h-auto min-h-[11rem] shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+            {/* Decorative Glows */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/20 transition-all duration-700 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+            <div className="absolute top-1/2 left-1/2 w-full h-full bg-emerald-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur shadow-inner border border-white/20 flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                    <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                  </div>
+                  <h2 className="text-2xl font-extrabold font-headline drop-shadow-md tracking-tight">{firstName}&apos;s Premium</h2>
+                </div>
+                <p className="text-emerald-50 dark:text-slate-300 text-sm max-w-[260px] opacity-90 drop-shadow-sm mb-4">Keep your money goals on track with smarter insights and cleaner reports.</p>
               </div>
-              <p className="text-on-primary/80 text-sm max-w-[230px]">Keep your money goals on track with smarter insights and cleaner reports.</p>
             </div>
-            <div className="z-10 flex justify-between items-center">
-              <span className="text-xs font-bold uppercase tracking-widest bg-primary-dim/30 px-3 py-1 rounded-full">Active Plan</span>
-              <button className="bg-primary-container text-on-primary-container px-4 py-2 rounded-full text-xs font-bold hover:opacity-90 transition-all">Manage</button>
+            
+            <div className="relative z-10 flex justify-between items-center mt-2 border-t border-white/15 pt-5">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-white/10 backdrop-blur shadow-sm border border-white/10 text-white px-3 py-1.5 rounded-full flex items-center gap-2"><span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></span> Active Plan</span>
+              <button className="bg-white text-emerald-800 dark:bg-emerald-400 dark:text-slate-900 px-5 py-2.5 rounded-full text-[10px] sm:text-xs font-extrabold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-1.5">Manage <span className="material-symbols-outlined text-xs">arrow_forward</span></button>
             </div>
           </div>
         </section>
