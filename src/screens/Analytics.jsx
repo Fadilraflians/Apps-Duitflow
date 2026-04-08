@@ -5,12 +5,11 @@ import { FinanceContext } from '../context/FinanceContext';
 import { AuthContext } from '../context/AuthContext';
 
 export default function Analytics() {
-  const { transactions, monthlySpend, currentBalance } = useContext(FinanceContext);
+  const { transactions, monthlySpend, currentBalance, showBalance, setShowBalance } = useContext(FinanceContext);
   const { user } = useContext(AuthContext);
   const firstName = user?.full_name?.split(' ')?.[0] || user?.email?.split('@')?.[0] || 'Guest';
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [activeChart, setActiveChart] = useState('income');
-  const [showBalance, setShowBalance] = useState(true);
   const formatCompactIDR = (value) =>
     new Intl.NumberFormat('id-ID', {
       style: 'currency',

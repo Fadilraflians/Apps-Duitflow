@@ -8,6 +8,22 @@ export const FinanceProvider = ({ children }) => {
   const [wallet, setWallet] = useState({ bca_balance: 0, cash_balance: 0 });
   const { user } = useContext(AuthContext);
 
+  const [showBalance, setShowBalanceState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('duitflow_showBalance');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const setShowBalance = (val) => {
+    setShowBalanceState(val);
+    try {
+      localStorage.setItem('duitflow_showBalance', JSON.stringify(val));
+    } catch {}
+  };
+
   const getApiBase = () => import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000/api`);
   const ACCOUNT_OVERRIDE_KEY = 'duitflow_account_type_overrides_v1';
   const readAccountOverrides = () => {
@@ -180,7 +196,9 @@ export const FinanceProvider = ({ children }) => {
         monthlyIncome,
         monthlySpend,
         wallet,
-        updateWallet
+        updateWallet,
+        showBalance,
+        setShowBalance
       }}
     >
       {children}

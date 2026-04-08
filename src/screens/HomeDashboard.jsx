@@ -6,7 +6,7 @@ import { GoalsContext } from '../context/GoalsContext';
 import { AuthContext } from '../context/AuthContext';
 
 export default function HomeDashboard() {
-  const { transactions, currentBalance, monthlySpend, monthlyIncome } = useContext(FinanceContext);
+  const { transactions, currentBalance, monthlySpend, monthlyIncome, showBalance, setShowBalance } = useContext(FinanceContext);
   const { goals } = useContext(GoalsContext);
   const { user, updateUserLimit } = useContext(AuthContext);
   const accountLabel = (tx) =>
@@ -22,7 +22,6 @@ export default function HomeDashboard() {
   };
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [newLimitAmt, setNewLimitAmt] = useState('');
-  const [showBalance, setShowBalance] = useState(true);
 
   const handleUpdateLimit = (e) => {
     e.preventDefault();
