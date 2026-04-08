@@ -197,15 +197,15 @@ export default function HomeDashboard() {
           </div>
 
           {/* Goal Priority Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 flex flex-col justify-between aspect-square shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all dark:border dark:border-slate-800">
+          <Link to="/goals" className="block bg-white dark:bg-slate-900 rounded-2xl p-5 flex flex-col justify-between aspect-square shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all dark:border dark:border-slate-800 group">
             <div className="flex justify-between items-start">
-              <div className="text-[#006575] dark:text-[#00dcfe]">
+              <div className="text-[#006575] dark:text-[#00dcfe] group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>radar</span>
               </div>
               <span className="text-[#006575] dark:text-[#00dcfe] text-[9px] font-bold uppercase tracking-widest">Active Goal</span>
             </div>
             <div className="mt-2">
-              <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm tracking-tight text-[#2c2f31] dark:text-slate-200">{priorityGoal ? priorityGoal.title : 'No Goal'}</p>
+              <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm tracking-tight text-[#2c2f31] dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">{priorityGoal ? priorityGoal.title : 'No Goal'}</p>
               <p className="text-[#595c5e] dark:text-slate-400 text-xs">{goalPct}% completed</p>
             </div>
             {/* Micro Interaction Avatars */}
@@ -213,7 +213,7 @@ export default function HomeDashboard() {
               <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[8px] font-bold">G</div>
               <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-[#6bff8f] flex items-center justify-center text-[8px] font-bold font-['Manrope'] text-[#004a1d]">+{priorityGoal ? '1' : '0'}</div>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Recent Activity List */}
@@ -245,8 +245,8 @@ export default function HomeDashboard() {
                   const x1 = xAt(idx - 1, weeklySpendSeries.length);
                   const x2 = xAt(idx, weeklySpendSeries.length);
                   const yScale = weeklyMax || 1;
-                  const y1 = 85 - (prev.total / yScale) * 60;
-                  const y2 = 85 - (day.total / yScale) * 60;
+                  const y1 = 85 - (prev.total / yScale) * 50;
+                  const y2 = 85 - (day.total / yScale) * 50;
                   return (
                     <line
                       key={day.key}
@@ -263,7 +263,7 @@ export default function HomeDashboard() {
                 {weeklySpendSeries.map((day, idx) => {
                   const x = xAt(idx, weeklySpendSeries.length);
                   const yScale = weeklyMax || 1;
-                  const y = 85 - (day.total / yScale) * 60;
+                  const y = 85 - (day.total / yScale) * 50;
                   const isActive = idx === weeklySpendSeries.length - 1;
                   
                   // Hitung tampilan nominal ringkas (contoh: 1,5M; 500k)

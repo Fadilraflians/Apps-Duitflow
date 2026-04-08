@@ -2,9 +2,10 @@ import React, { useContext, useState } from 'react';
 import BottomNavBar from '../components/BottomNavBar';
 import { GoalsContext } from '../context/GoalsContext';
 import { AuthContext } from '../context/AuthContext';
+import { FinanceContext } from '../context/FinanceContext';
 
 export default function Goals() {
-  const { goals, addGoal, addFundsToGoal } = useContext(GoalsContext);
+  const { goals, addGoal, addFundsToGoal, deleteGoal } = useContext(GoalsContext);
   const { user } = useContext(AuthContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const firstName = user?.full_name?.split(' ')?.[0] || user?.email?.split('@')?.[0] || 'Guest';
@@ -135,8 +136,21 @@ export default function Goals() {
 
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 relative z-10">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="bg-white/20 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></span> Active Priority</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-white/20 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></span> Active Priority</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Apakah Anda yakin ingin menghapus goal ini?")) {
+                          deleteGoal(priorityGoal.id);
+                        }
+                      }}
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-rose-500/80 text-white flex items-center justify-center transition-colors"
+                      title="Delete Goal"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                    </button>
                   </div>
                   <h2 className="font-headline text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight drop-shadow-md">{priorityGoal.title}</h2>
                   <p className="font-body text-sm text-emerald-50 dark:text-slate-300 opacity-90 mb-6">{priorityGoal.description}</p>
@@ -214,7 +228,20 @@ export default function Goals() {
                   <div className="w-12 h-12 rounded-md bg-surface-container-lowest flex items-center justify-center shadow-sm overflow-hidden">
                     <span className="material-symbols-outlined text-tertiary text-[22px] leading-none">{getSafeIcon(g.icon)}</span>
                   </div>
-                  <span className="font-headline text-sm font-bold text-primary">{progressStr}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-headline text-sm font-bold text-primary">{progressStr}</span>
+                    <button 
+                      onClick={() => {
+                        if (window.confirm("Apakah Anda yakin ingin menghapus goal ini?")) {
+                          deleteGoal(g.id);
+                        }
+                      }}
+                      className="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors"
+                      title="Delete Goal"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
                 </div>
                 <h4 className="font-headline text-base sm:text-lg font-bold text-on-surface mb-1">{g.title}</h4>
                 <p className="font-body text-xs text-on-surface-variant mb-4 min-h-[2.5rem]">{g.description}</p>

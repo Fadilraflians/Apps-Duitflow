@@ -135,8 +135,26 @@ export const GoalsProvider = ({ children }) => {
     }
   };
 
+  const deleteGoal = async (goalId) => {
+    try {
+      if (user?.id) {
+        const response = await fetch(`${getApiUrl()}/${goalId}?user_id=${user.id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          setGoals(prev => prev.filter(g => g.id !== goalId));
+          return { ok: true };
+        }
+      }
+      return { ok: false, error: 'Failed to delete goal' };
+    } catch (err) {
+      console.error("Failed to delete goal", err);
+      return { ok: false, error: 'Network error' };
+    }
+  };
+
   return (
-    <GoalsContext.Provider value={{ goals, addGoal, addFundsToGoal }}>
+    <GoalsContext.Provider value={{ goals, addGoal, addFundsToGoal, deleteGoal }}>
       {children}
     </GoalsContext.Provider>
   );
