@@ -29,8 +29,32 @@ export default function Analytics() {
     year: 'numeric'
   }).format(new Date());
 
-  const calculateCategoryDistribution = () => {
-    const expenses = transactions.filter(tx => tx.negative);
+  const currentYYYYMM = new Date().toISOString().slice(0, 7);
+  const [distributionMonth, setDistributionMonth] = useState(currentYYYYMM);
+
+  const availableMonths = useMemo(() => {
+    const mSet = new Set();
+    transactions.forEach(tx => {
+      const d = new Date(tx.time);
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      mSet.add(new Date(d - tzOffset).toISOString().slice(0, 7));
+    });
+    const arr = Array.from(mSet).sort((a,b) => b.localeCompare(a));
+    if (!arr.includes(currentYYYYMM)) arr.unshift(currentYYYYMM);
+    return arr;
+  }, [transactions, currentYYYYMM]);
+
+  const { categories, totalSpendForMonth } = useMemo(() => {
+    const expenses = transactions.filter(tx => {
+      if (!tx.negative) return false;
+      const d = new Date(tx.time);
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      const txMonth = new Date(d - tzOffset).toISOString().slice(0, 7);
+      return txMonth === distributionMonth;
+    });
+
+    const totalSpend = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+
     const categoryTotals = expenses.reduce((acc, curr) => {
       acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
       return acc;
@@ -38,17 +62,17 @@ export default function Analytics() {
 
     const getColors = (cat) => {
       switch(cat) {
-        case 'Food': return { colorName: 'primary', hex: '#006a2d', icon: 'restaurant' };
-        case 'Transport': return { colorName: 'tertiary', hex: '#006575', icon: 'directions_car' };
-        case 'Shopping': return { colorName: 'secondary', hex: '#006946', icon: 'shopping_cart' };
-         case 'Leisure': return { colorName: 'primary-container', hex: '#6bff8f', icon: 'theater_comedy' };
-         case 'Bills': return { colorName: 'error', hex: '#b31b25', icon: 'bolt' };
-        default: return { colorName: 'surface-container-highest', hex: '#d9dde0', icon: 'category' };
+        case 'Food': return { colorName: 'emerald-600', hex: '#059669', icon: 'restaurant' };
+        case 'Transport': return { colorName: 'teal-600', hex: '#0d9488', icon: 'directions_car' };
+        case 'Shopping': return { colorName: 'emerald-500', hex: '#10b981', icon: 'shopping_cart' };
+         case 'Leisure': return { colorName: 'teal-400', hex: '#2dd4bf', icon: 'theater_comedy' };
+         case 'Bills': return { colorName: 'rose-500', hex: '#f43f5e', icon: 'bolt' };
+        default: return { colorName: 'slate-300', hex: '#cbd5e1', icon: 'category' };
       }
     };
 
-    const categories = Object.keys(categoryTotals).map(cat => {
-      const percentage = monthlySpend > 0 ? (categoryTotals[cat] / monthlySpend) * 100 : 0;
+    const catsArr = Object.keys(categoryTotals).map(cat => {
+      const percentage = totalSpend > 0 ? (categoryTotals[cat] / totalSpend) * 100 : 0;
       return { 
         name: cat, 
         amount: categoryTotals[cat], 
@@ -58,10 +82,8 @@ export default function Analytics() {
       };
     }).sort((a, b) => b.amount - a.amount);
 
-    return categories;
-  };
-
-  const categories = useMemo(() => calculateCategoryDistribution(), [transactions, monthlySpend]);
+    return { categories: catsArr, totalSpendForMonth: totalSpend };
+  }, [transactions, distributionMonth]);
 
   const circleLength = 502;
   let currentOffset = 0;
@@ -209,44 +231,61 @@ export default function Analytics() {
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-7 bg-surface-container-lowest rounded-xl p-8 shadow-[0_8px_24px_rgba(0,0,0,0.04)] relative overflow-hidden">
-            <div className="flex justify-between items-start mb-8">
+          <div className="md:col-span-7 bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-200/60 dark:border-slate-800 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 dark:bg-emerald-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 pointer-events-none"></div>
+            
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-10 relative z-10">
               <div>
-                <h2 className="text-lg font-bold">Expense Distribution</h2>
-                <p className="text-sm text-on-surface-variant">Periode: {currentMonthLabel}</p>
+                <h2 className="text-xl sm:text-2xl font-extrabold font-headline mb-2 text-slate-800 dark:text-slate-100">Expense Distribution</h2>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">calendar_month</span>
+                  <select 
+                    value={distributionMonth} 
+                    onChange={(e) => setDistributionMonth(e.target.value)}
+                    className="bg-slate-100/70 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-emerald-800 dark:text-emerald-300 font-bold text-xs rounded-lg px-2 py-1 outline-none transition-colors appearance-none cursor-pointer border border-emerald-100 dark:border-emerald-900/50"
+                  >
+                    {availableMonths.map(m => {
+                      const [year, month] = m.split('-');
+                      const theDate = new Date(year, parseInt(month) - 1);
+                      return <option key={m} value={m}>{new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(theDate)}</option>;
+                    })}
+                  </select>
+                </div>
               </div>
-              <span className="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">High Growth</span>
+              <span className="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-sm border border-emerald-200/50 dark:border-emerald-800/50 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Tracker</span>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center gap-8">
-              <div className="relative w-56 h-56 flex items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-center gap-10 relative z-10">
+              <div className="relative w-56 h-56 flex items-center justify-center filter drop-shadow-md">
                 <svg className="w-full h-full transform -rotate-90">
-                  <circle className="text-surface-container" cx="96" cy="96" fill="transparent" r="80" stroke="currentColor" strokeWidth="20"></circle>
+                  <circle className="text-slate-100 dark:text-slate-800" cx="96" cy="96" fill="transparent" r="80" stroke="currentColor" strokeWidth="20"></circle>
                   {generateChartSegments()}
                 </svg>
-                <div className="absolute w-[9.5rem] h-[9.5rem] rounded-full bg-surface-container-lowest shadow-[0_8px_20px_rgba(0,0,0,0.08)] border border-surface-container/60 flex flex-col items-center justify-center text-center px-3">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Total Spend</span>
-                  <span className="text-2xl leading-tight font-extrabold tracking-tight text-on-surface">
-                    {formatCompactIDR(monthlySpend)}
+                <div className="absolute w-[9.5rem] h-[9.5rem] rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center px-3 z-10">
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">Total Spend</span>
+                  <span className="text-[1.35rem] leading-tight font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+                    {formatCompactIDR(totalSpendForMonth)}
                   </span>
-                  <span className="text-[11px] text-on-surface-variant mt-1">
-                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(monthlySpend)}
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
+                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalSpendForMonth)}
                   </span>
                 </div>
               </div>
 
-              <div className="space-y-4 flex-1">
+              <div className="space-y-4 flex-1 w-full bg-slate-50/50 dark:bg-slate-950/30 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
                 {categories.map(item => (
-                  <div key={item.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full bg-${item.colorName}`} style={{backgroundColor: item.hex}}></div>
-                      <span className="text-sm font-medium">{item.name}</span>
+                  <div key={item.name} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-inner relative transition-transform group-hover:scale-110" style={{backgroundColor: item.hex + '15'}}>
+                        <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: item.hex}}></div>
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{item.name}</span>
                     </div>
-                    <span className="text-sm font-bold">{item.percentStr}</span>
+                    <span className="text-sm font-extrabold tracking-tight text-slate-800 dark:text-slate-200">{item.percentStr}</span>
                   </div>
                 ))}
                 {categories.length === 0 && (
-                   <p className="text-sm text-on-surface-variant">No expenses recorded yet.</p>
+                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center py-4">No expenses recorded.</p>
                 )}
               </div>
             </div>
