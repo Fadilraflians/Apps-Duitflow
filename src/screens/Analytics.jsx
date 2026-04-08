@@ -10,6 +10,7 @@ export default function Analytics() {
   const firstName = user?.full_name?.split(' ')?.[0] || user?.email?.split('@')?.[0] || 'Guest';
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [activeChart, setActiveChart] = useState('income');
+  const [showBalance, setShowBalance] = useState(true);
   const formatCompactIDR = (value) =>
     new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -200,9 +201,14 @@ export default function Analytics() {
           
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-emerald-100/90 dark:text-slate-400 mb-1">Jumlah Uang Saya</p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-emerald-100/90 dark:text-slate-400">Jumlah Uang Saya</p>
+                <button onClick={() => setShowBalance(!showBalance)} className="text-emerald-100/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-5 h-5 flex items-center justify-center backdrop-blur shadow-sm">
+                  <span className="material-symbols-outlined text-[12px]">{showBalance ? 'visibility' : 'visibility_off'}</span>
+                </button>
+              </div>
               <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tighter drop-shadow-md">
-                {formatIDR(Math.abs(currentBalance))}
+                {showBalance ? formatIDR(Math.abs(currentBalance)) : 'Rp •••••••'}
               </h2>
               <div className="flex items-center gap-2 mt-2">
                 <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${currentBalance < 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-100'} ring-1 ring-inset ${currentBalance < 0 ? 'ring-rose-500/30' : 'ring-emerald-500/30'}`}>

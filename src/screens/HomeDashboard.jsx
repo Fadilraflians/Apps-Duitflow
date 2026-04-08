@@ -22,6 +22,7 @@ export default function HomeDashboard() {
   };
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [newLimitAmt, setNewLimitAmt] = useState('');
+  const [showBalance, setShowBalance] = useState(true);
 
   const handleUpdateLimit = (e) => {
     e.preventDefault();
@@ -145,10 +146,15 @@ export default function HomeDashboard() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
 
-            <p className="font-['Plus_Jakarta_Sans'] font-bold text-[10px] uppercase tracking-[0.2em] text-emerald-100 dark:text-slate-400 mb-2 relative z-10 drop-shadow-sm">Current Balance</p>
+            <div className="flex items-center gap-2 mb-2 relative z-10">
+              <p className="font-['Plus_Jakarta_Sans'] font-bold text-[10px] uppercase tracking-[0.2em] text-emerald-100 dark:text-slate-400 drop-shadow-sm">Current Balance</p>
+              <button onClick={() => setShowBalance(!showBalance)} className="text-emerald-100/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-5 h-5 flex items-center justify-center backdrop-blur shadow-sm">
+                <span className="material-symbols-outlined text-[12px]">{showBalance ? 'visibility' : 'visibility_off'}</span>
+              </button>
+            </div>
             <div className="flex items-center gap-3 relative z-10">
               <h2 className={`font-['Plus_Jakarta_Sans'] font-extrabold text-4xl lg:text-5xl tracking-tighter drop-shadow-md ${isBalanceNegative ? 'text-rose-300' : 'text-white'}`}>
-                {formatIDR(absBalance)}
+                {showBalance ? formatIDR(absBalance) : 'Rp •••••••'}
               </h2>
               {!isBalanceNegative && (
                 <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white shadow-sm font-bold text-xs px-2.5 py-1 rounded-full mb-1">
