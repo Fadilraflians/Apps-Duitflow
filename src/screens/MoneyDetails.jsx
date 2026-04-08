@@ -62,40 +62,67 @@ export default function MoneyDetails() {
       </header>
 
       <main className="px-6 mt-5 max-w-2xl mx-auto space-y-4">
-        <section className="bg-gradient-to-r from-[#0b8f4a] to-[#065f46] text-white rounded-2xl p-6 shadow-[0_12px_32px_rgba(6,95,70,0.25)]">
-          <p className="text-[11px] uppercase tracking-widest font-bold text-emerald-100">Total Uang Saya</p>
-          <h2 className="text-3xl font-extrabold tracking-tight mt-2">{formatIDR(Math.max(totalAmount, 0))}</h2>
-          <p className="text-xs text-emerald-100 mt-1">Ringkasan dana yang bisa dipakai saat ini.</p>
+        {/* Hero Balance Banner */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] group">
+          {/* Decorative Glows */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 w-full h-full bg-emerald-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-emerald-200/80 text-sm">account_balance_wallet</span>
+              <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-emerald-100/90 dark:text-slate-400">Total Uang Saya</p>
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tighter drop-shadow-md mb-2">
+              {formatIDR(Math.max(totalAmount, 0))}
+            </h2>
+            <div className="inline-flex items-center gap-2 bg-black/10 dark:bg-black/20 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full mt-2">
+               <span className="material-symbols-outlined text-emerald-200 text-xs">info</span>
+               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-50 dark:text-slate-300">Ringkasan dana yang bisa dipakai</p>
+            </div>
+          </div>
         </section>
 
-        <section className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-800 shadow-[0_8px_24px_rgba(0,0,0,0.04)] space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 flex items-center justify-center">
+        {/* Detailed Accounts List */}
+        <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/50 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.03)] dark:shadow-none space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0b8f4a] to-emerald-300 opacity-50"></div>
+          <h3 className="font-['Plus_Jakarta_Sans'] font-bold text-base text-slate-800 dark:text-slate-200 mb-2">Rincian Akun</h3>
+          
+          <div className="group flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-950/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                 <span className="material-symbols-outlined">account_balance</span>
               </div>
               <div>
-                <p className="font-bold text-sm">Bank BCA</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Tabungan utama</p>
+                <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-slate-900 dark:text-slate-100">Bank BCA</p>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md mt-1 inline-block">Tabungan utama</p>
               </div>
             </div>
-            <p className="w-44 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-right font-bold">
-              {formatIDR(bcaAmount)}
-            </p>
+            <div className="w-full sm:w-auto relative">
+              <p className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-colors group-hover:border-blue-200 dark:group-hover:border-blue-800">
+                {formatIDR(bcaAmount)}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+          
+          <div className="w-full h-px bg-slate-100 dark:bg-slate-800/60"></div>
+
+          <div className="group flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                 <span className="material-symbols-outlined">payments</span>
               </div>
               <div>
-                <p className="font-bold text-sm">Cash</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Uang tunai</p>
+                <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-slate-900 dark:text-slate-100">Cash</p>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md mt-1 inline-block">Uang tunai</p>
               </div>
             </div>
-            <p className="w-44 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-right font-bold">
-              {formatIDR(cashAmount)}
-            </p>
+            <div className="w-full sm:w-auto relative">
+              <p className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-colors group-hover:border-amber-200 dark:group-hover:border-amber-800">
+                {formatIDR(cashAmount)}
+              </p>
+            </div>
           </div>
         </section>
       </main>
