@@ -170,26 +170,42 @@ export default function Analytics() {
           <h1 className="text-4xl font-extrabold text-on-surface tracking-tight">Monthly Analytics</h1>
         </section>
 
-        <section className="bg-gradient-to-r from-[#0b8f4a] to-[#065f46] text-white rounded-2xl p-5 shadow-[0_12px_32px_rgba(6,95,70,0.25)]">
-          <div className="flex items-start justify-between gap-4">
+        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] group transform hover:scale-[1.01] transition-all duration-300">
+          {/* Abstract glows */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-all duration-500 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 w-full h-full bg-emerald-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+          
+          <div className="relative z-10 flex items-start justify-between gap-4">
             <div>
-              <p className="text-[11px] uppercase tracking-widest font-bold text-emerald-100">Jumlah Uang Saya</p>
-              <h2 className="text-3xl font-extrabold tracking-tight mt-2">{formatIDR(Math.abs(currentBalance))}</h2>
-              <p className="text-xs text-emerald-100 mt-1">
-                {currentBalance < 0 ? 'Saldo saat ini minus' : 'Saldo saat ini positif'}
-              </p>
+              <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-emerald-100/90 dark:text-slate-400 mb-1">Jumlah Uang Saya</p>
+              <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tighter drop-shadow-md">
+                {formatIDR(Math.abs(currentBalance))}
+              </h2>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${currentBalance < 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-100'} ring-1 ring-inset ${currentBalance < 0 ? 'ring-rose-500/30' : 'ring-emerald-500/30'}`}>
+                  <span className="material-symbols-outlined text-[10px]">{currentBalance < 0 ? 'arrow_downward' : 'arrow_upward'}</span>
+                </span>
+                <p className="text-[11px] font-medium text-emerald-50 dark:text-slate-300 opacity-90">
+                  {currentBalance < 0 ? 'Saldo saat ini minus' : 'Saldo saat ini positif'}
+                </p>
+              </div>
             </div>
-            <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center">
-              <span className="material-symbols-outlined">account_balance_wallet</span>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner transform group-hover:rotate-6 transition-transform duration-300">
+              <span className="material-symbols-outlined text-3xl text-white opacity-90 drop-shadow-sm">account_balance_wallet</span>
             </div>
           </div>
-          <Link
-            to="/money-details"
-            className="mt-4 inline-flex items-center gap-1 bg-white/20 hover:bg-white/25 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors"
-          >
-            Lihat Detail Uang Saya
-            <span className="material-symbols-outlined text-base">chevron_right</span>
-          </Link>
+          
+          <div className="relative z-10 mt-6 pt-5 border-t border-white/15 flex items-center justify-between">
+            <p className="text-xs text-white/80 font-medium tracking-wide">Pantau perputaran uangmu.</p>
+            <Link
+              to="/money-details"
+              className="inline-flex items-center gap-1.5 bg-white text-emerald-800 dark:bg-emerald-400 dark:text-slate-900 px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-900/20"
+            >
+              Lihat Detail
+              <span className="material-symbols-outlined text-sm">arrow_forward</span>
+            </Link>
+          </div>
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
