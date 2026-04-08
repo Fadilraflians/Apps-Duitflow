@@ -130,6 +130,8 @@ export default function Analytics() {
     0,
     ...cashflowSeries.map((d) => Math.max(d.income, d.spend))
   );
+  const maxDailyIncome = Math.max(0, ...cashflowSeries.map(d => d.income));
+  const maxDailySpend = Math.max(0, ...cashflowSeries.map(d => d.spend));
   const dailyRangeLabel =
     cashflowSeries[0]?.label === cashflowSeries[cashflowSeries.length - 1]?.label
       ? cashflowSeries[0]?.label
@@ -233,160 +235,94 @@ export default function Analytics() {
             </div>
           </div>
 
-          <div className="md:col-span-5 bg-surface-container-low rounded-xl p-8 flex flex-col">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold">Grafik Uang Masuk &amp; Keluar</h2>
-              <p className="text-sm text-on-surface-variant">7 tanggal pencatatan terakhir ({dailyRangeLabel})</p>
-            </div>
-            <div className="flex items-center gap-4 text-[11px] font-bold mb-2">
-              <span className="inline-flex items-center gap-1 text-emerald-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Income</span>
-              <span className="inline-flex items-center gap-1 text-rose-600"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" />Spend</span>
-            </div>
-            <div className="relative h-40 mt-4">
-              <svg className="absolute inset-0 w-full h-full">
-                {/* grid line */}
-                <line
-                  x1="0"
-                  y1="85%"
-                  x2="100%"
-                  y2="85%"
-                  stroke="rgba(148,163,184,0.3)"
-                  strokeWidth="1"
-                />
-                {cashflowSeries.map((day, idx) => {
-                  if (idx === 0) return null;
-                  const prev = cashflowSeries[idx - 1];
-                  const x1 = xAt(idx - 1, cashflowSeries.length);
-                  const x2 = xAt(idx, cashflowSeries.length);
-                  const yScale = maxDaily || 1;
-                  const y1 = 85 - (prev.income / yScale) * 70;
-                  const y2 = 85 - (day.income / yScale) * 70;
-                  return (
-                    <line
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={`income-line-${idx}`}
-                      x1={`${x1}%`}
-                      y1={`${y1}%`}
-                      x2={`${x2}%`}
-                      y2={`${y2}%`}
-                      stroke="#10b981"
-                      strokeWidth="2.25"
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
-                {cashflowSeries.map((day, idx) => {
-                  if (idx === 0) return null;
-                  const prev = cashflowSeries[idx - 1];
-                  const x1 = xAt(idx - 1, cashflowSeries.length);
-                  const x2 = xAt(idx, cashflowSeries.length);
-                  const yScale = maxDaily || 1;
-                  const y1 = 85 - (prev.spend / yScale) * 70;
-                  const y2 = 85 - (day.spend / yScale) * 70;
-                  return (
-                    <line
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={`spend-line-${idx}`}
-                      x1={`${x1}%`}
-                      y1={`${y1}%`}
-                      x2={`${x2}%`}
-                      y2={`${y2}%`}
-                      stroke="#f43f5e"
-                      strokeWidth="2.25"
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
-                {cashflowSeries.map((day, idx) => {
-                  const x = xAt(idx, cashflowSeries.length);
-                  const yScale = maxDaily || 1;
-                  const yIncome = 85 - (day.income / yScale) * 70;
-                  const ySpend = 85 - (day.spend / yScale) * 70;
-
-                  const formatCompactLine = (val) => {
-                    if (!val || val <= 0) return '';
-                    if (val >= 1000000) return (val / 1000000).toFixed(1).replace('.0', '') + 'M';
-                    if (val >= 1000) return (val / 1000).toFixed(0) + 'k';
-                    return val.toString();
-                  };
-
-                  const displayIncome = formatCompactLine(day.income);
-                  const displaySpend = formatCompactLine(day.spend);
-
-                  return (
-                    <g
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={`dot-${idx}`}
-                    >
-                      {displayIncome && (
-                        <text
-                          x={`${x}%`}
-                          y={`${yIncome - 8}%`}
-                          textAnchor="middle"
-                          fill="#10b981"
-                          fontSize="9"
-                          fontWeight="bold"
-                          className="dark:fill-emerald-400 select-none pointer-events-none drop-shadow-sm"
-                        >
-                          {displayIncome}
-                        </text>
-                      )}
-                      {displaySpend && (
-                        <text
-                          x={`${x}%`}
-                          y={`${ySpend - 8}%`}
-                          textAnchor="middle"
-                          fill="#f43f5e"
-                          fontSize="9"
-                          fontWeight="bold"
-                          className="dark:fill-rose-400 select-none pointer-events-none drop-shadow-sm"
-                        >
-                          {displaySpend}
-                        </text>
-                      )}
-                      <circle
-                        cx={`${x}%`}
-                        cy={`${yIncome}%`}
-                        r="3.25"
-                        fill="#10b981"
-                        stroke="#ecfdf5"
-                        strokeWidth="1.5"
-                      >
-                        <title>{`${day.label} Income: ${formatIDR(day.income)}`}</title>
-                      </circle>
-                      <circle
-                        cx={`${x}%`}
-                        cy={`${ySpend}%`}
-                        r="3.25"
-                        fill="#f43f5e"
-                        stroke="#fff1f2"
-                        strokeWidth="1.5"
-                      >
-                        <title>{`${day.label} Spend: ${formatIDR(day.spend)}`}</title>
-                      </circle>
-                    </g>
-                  );
-                })}
-              </svg>
-              <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-on-surface-variant">
-                {cashflowSeries.map((d) => (
-                  <span key={d.key}>{d.label}</span>
-                ))}
+          <div className="md:col-span-5 bg-surface-container-low rounded-xl p-8 flex flex-col gap-6">
+            
+            {/* Income Section */}
+            <div>
+              <div className="mb-4">
+                <h2 className="text-lg font-bold">Grafik Uang Masuk</h2>
+                <p className="text-sm text-on-surface-variant">7 hari terakhir ({dailyRangeLabel})</p>
+              </div>
+              <div className="relative h-32 mt-4">
+                <svg className="absolute inset-0 w-full h-full">
+                  <line x1="0" y1="85%" x2="100%" y2="85%" stroke="rgba(148,163,184,0.3)" strokeWidth="1" />
+                  {cashflowSeries.map((day, idx) => {
+                    if (idx === 0) return null;
+                    const prev = cashflowSeries[idx - 1];
+                    const x1 = xAt(idx - 1, cashflowSeries.length);
+                    const x2 = xAt(idx, cashflowSeries.length);
+                    const yScale = maxDailyIncome || 1;
+                    const y1 = 85 - (prev.income / yScale) * 70;
+                    const y2 = 85 - (day.income / yScale) * 70;
+                    return (
+                      <line key={`incoline-${idx}`} x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} stroke="#10b981" strokeWidth="2.25" strokeLinecap="round" />
+                    );
+                  })}
+                  {cashflowSeries.map((day, idx) => {
+                    const x = xAt(idx, cashflowSeries.length);
+                    const yScale = maxDailyIncome || 1;
+                    const yIncome = 85 - (day.income / yScale) * 70;
+                    const displayIncome = day.income >= 1000000 ? (day.income / 1000000).toFixed(1).replace('.0', '') + 'M' : (day.income >= 1000 ? (day.income / 1000).toFixed(0) + 'k' : (day.income > 0 ? day.income.toString() : ''));
+                    return (
+                      <g key={`incodot-${idx}`}>
+                        {displayIncome && <text x={`${x}%`} y={`${yIncome - 8}%`} textAnchor="middle" fill="#10b981" fontSize="9" fontWeight="bold" className="dark:fill-emerald-400 select-none pointer-events-none drop-shadow-sm">{displayIncome}</text>}
+                        <circle cx={`${x}%`} cy={`${yIncome}%`} r="3.25" fill="#10b981" stroke="#ecfdf5" strokeWidth="1.5"><title>{`${day.label} Income: ${formatIDR(day.income)}`}</title></circle>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-on-surface-variant">
+                  {cashflowSeries.map((d) => <span key={`inl-${d.key}`}>{d.label}</span>)}
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Link to="/cashflow-details/income" className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Detail Income</Link>
               </div>
             </div>
-            <div className="mt-6 grid grid-cols-2 gap-2">
-              <Link
-                to="/cashflow-details/income"
-                className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-center"
-              >
-                Detail Income
-              </Link>
-              <Link
-                to="/cashflow-details/spend"
-                className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 text-center"
-              >
-                Detail Spend
-              </Link>
+
+            <hr className="border-slate-200 dark:border-slate-800" />
+
+            {/* Spend Section */}
+            <div>
+              <div className="mb-4">
+                <h2 className="text-lg font-bold">Grafik Uang Keluar</h2>
+                <p className="text-sm text-on-surface-variant">7 hari terakhir ({dailyRangeLabel})</p>
+              </div>
+              <div className="relative h-32 mt-4">
+                <svg className="absolute inset-0 w-full h-full">
+                  <line x1="0" y1="85%" x2="100%" y2="85%" stroke="rgba(148,163,184,0.3)" strokeWidth="1" />
+                  {cashflowSeries.map((day, idx) => {
+                    if (idx === 0) return null;
+                    const prev = cashflowSeries[idx - 1];
+                    const x1 = xAt(idx - 1, cashflowSeries.length);
+                    const x2 = xAt(idx, cashflowSeries.length);
+                    const yScale = maxDailySpend || 1;
+                    const y1 = 85 - (prev.spend / yScale) * 70;
+                    const y2 = 85 - (day.spend / yScale) * 70;
+                    return (
+                      <line key={`spline-${idx}`} x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} stroke="#f43f5e" strokeWidth="2.25" strokeLinecap="round" />
+                    );
+                  })}
+                  {cashflowSeries.map((day, idx) => {
+                    const x = xAt(idx, cashflowSeries.length);
+                    const yScale = maxDailySpend || 1;
+                    const ySpend = 85 - (day.spend / yScale) * 70;
+                    const displaySpend = day.spend >= 1000000 ? (day.spend / 1000000).toFixed(1).replace('.0', '') + 'M' : (day.spend >= 1000 ? (day.spend / 1000).toFixed(0) + 'k' : (day.spend > 0 ? day.spend.toString() : ''));
+                    return (
+                      <g key={`spdot-${idx}`}>
+                        {displaySpend && <text x={`${x}%`} y={`${ySpend - 8}%`} textAnchor="middle" fill="#f43f5e" fontSize="9" fontWeight="bold" className="dark:fill-rose-400 select-none pointer-events-none drop-shadow-sm">{displaySpend}</text>}
+                        <circle cx={`${x}%`} cy={`${ySpend}%`} r="3.25" fill="#f43f5e" stroke="#fff1f2" strokeWidth="1.5"><title>{`${day.label} Spend: ${formatIDR(day.spend)}`}</title></circle>
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-on-surface-variant">
+                  {cashflowSeries.map((d) => <span key={`spl-${d.key}`}>{d.label}</span>)}
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <Link to="/cashflow-details/spend" className="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Detail Spend</Link>
+              </div>
             </div>
           </div>
 

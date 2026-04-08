@@ -32,6 +32,10 @@ export default function HomeDashboard() {
     }
   };
 
+  const dailySpend = transactions
+    .filter(tx => tx.negative && new Date(tx.time).toDateString() === new Date().toDateString())
+    .reduce((acc, tx) => acc + tx.amount, 0);
+
   // Determine budget warnings
   const monthlyLimit = user?.monthly_limit || 0;
   const spendPctRaw = monthlyLimit > 0 ? (monthlySpend / monthlyLimit) * 100 : 0;
@@ -172,9 +176,9 @@ export default function HomeDashboard() {
           {/* Spending Card (Dynamic with Limit logic) */}
           <div className="bg-[#73fbbc] dark:bg-[#004a1d] rounded-2xl p-5 flex flex-col justify-between aspect-square group shadow-[0_8px_24px_rgba(115,251,188,0.2)] dark:shadow-none hover:shadow-[0_12px_32px_rgba(115,251,188,0.3)] transition-all">
             <div>
-              <span className="text-[#004a1d] dark:text-[#6bff8f]/70 text-[9px] font-bold uppercase tracking-widest">This Month's Spending</span>
+              <span className="text-[#004a1d] dark:text-[#6bff8f]/70 text-[9px] font-bold uppercase tracking-widest">Today's Spending</span>
               <p className="font-['Plus_Jakarta_Sans'] text-[#004a1d] dark:text-[#6bff8f] font-extrabold text-xl mt-1 tracking-tight">
-                {formatIDR(monthlySpend)}
+                {formatIDR(dailySpend)}
               </p>
             </div>
             
