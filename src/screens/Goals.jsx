@@ -96,10 +96,33 @@ export default function Goals() {
       </header>
       
       <main className="px-4 sm:px-6 pb-32 pt-3 sm:pt-4 max-w-2xl mx-auto">
-        <div className="mb-6 sm:mb-8 mt-2 sm:mt-4 bg-white/90 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-          <span className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-primary mb-2 block">Goal Planner</span>
-          <h1 className="font-headline text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-on-surface leading-tight">Bangun target finansialmu dengan lebih terarah.</h1>
-          <p className="text-sm text-on-surface-variant mt-2">Pantau progres, prioritaskan mimpi, dan tambahkan dana kapan saja.</p>
+        <div className="relative mb-8 sm:mb-10 mt-4 overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 md:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.04)] group">
+          {/* Subtle Decorative Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 dark:bg-emerald-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-50 dark:bg-blue-900/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 mb-4 border border-emerald-100/50 dark:border-emerald-800/50 shadow-sm">
+                <span className="material-symbols-outlined text-sm">stars</span>
+                <span className="font-label text-[10px] font-extrabold uppercase tracking-widest">Goal Planner</span>
+              </div>
+              <h1 className="font-headline text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-slate-800 dark:text-slate-100 leading-[1.15] mb-3">
+                Bangun finansial dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">lebih terarah.</span>
+              </h1>
+              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed font-body">
+                Pantau progres, prioritaskan mimpi besarmu, dan tambahkan dana kapan saja dengan mudah.
+              </p>
+            </div>
+            
+            {/* Elegant Vector / Icon Right Side */}
+            <div className="hidden md:flex shrink-0 w-32 h-32 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-900/20 dark:to-teal-900/10 items-center justify-center shadow-inner relative transform group-hover:-translate-y-1 transition-transform duration-500 border border-white dark:border-slate-800">
+               <span className="material-symbols-outlined text-6xl text-emerald-500/80 dark:text-emerald-400/80 drop-shadow-sm">rocket_launch</span>
+               {/* animated rings */}
+               <div className="absolute inset-0 border border-emerald-200/50 dark:border-emerald-700/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
+               <div className="absolute top-2 left-2 right-2 bottom-2 border border-dashed border-teal-200/50 dark:border-teal-700/30 rounded-full animate-[spin_15s_linear_infinite_reverse]"></div>
+            </div>
+          </div>
         </div>
 
         {/* Priority Goal */}
