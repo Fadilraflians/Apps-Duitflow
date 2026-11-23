@@ -8,7 +8,7 @@ const formatTransactionDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Tanggal tidak tersedia';
   return new Intl.DateTimeFormat('id-ID', {
-    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+    day: '2-digit', month: 'short', year: 'numeric'
   }).format(date);
 };
 
@@ -228,7 +228,7 @@ export default function Transactions() {
                 key={tx.id}
                 className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                       tx.negative
@@ -238,9 +238,9 @@ export default function Transactions() {
                   >
                     <span className="material-symbols-outlined text-[18px]">{tx.icon}</span>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold">{tx.title}</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{tx.title}</p>
+                    <p className="min-w-0 truncate text-[10px] text-slate-500 dark:text-slate-400 sm:text-[11px]">
                       {tx.category} •{' '}
                       <span className="material-symbols-outlined mr-1 align-middle text-[12px]">calendar_today</span>
                       {formatTransactionDate(tx.time)}
@@ -257,7 +257,7 @@ export default function Transactions() {
                   </div>
                 </div>
                 <div
-                  className={`text-sm font-bold ${
+                  className={`max-w-[108px] shrink-0 whitespace-nowrap text-right text-[10px] font-bold sm:max-w-none sm:text-sm ${
                     tx.negative ? 'text-slate-800 dark:text-slate-200' : 'text-emerald-600'
                   }`}
                 >
