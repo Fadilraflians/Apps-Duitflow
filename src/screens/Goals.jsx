@@ -3,6 +3,7 @@ import BottomNavBar from '../components/BottomNavBar';
 import { GoalsContext } from '../context/GoalsContext';
 import { AuthContext } from '../context/AuthContext';
 import { FinanceContext } from '../context/FinanceContext';
+import AmountInput, { parseAmount } from '../components/AmountInput';
 
 export default function Goals() {
   const { goals, addGoal, addFundsToGoal, deleteGoal } = useContext(GoalsContext);
@@ -35,7 +36,7 @@ export default function Goals() {
     addGoal({
       title,
       description,
-      target_amount: parseFloat(targetAmount),
+      target_amount: parseAmount(targetAmount),
       icon,
       is_priority: isPriority
     });
@@ -51,7 +52,7 @@ export default function Goals() {
   const handleAddFundsSubmit = (e) => {
     e.preventDefault();
     if (!activeFundGoal) return;
-    const parsedFundAmount = parseFloat(String(fundAmount).replace(/[^\d]/g, ''));
+    const parsedFundAmount = parseAmount(fundAmount);
     if (!parsedFundAmount || isNaN(parsedFundAmount) || parsedFundAmount <= 0) {
       setFundError('Masukkan nominal yang valid');
       return;
@@ -302,7 +303,7 @@ export default function Goals() {
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-outline font-label mb-1 ml-1">Target Amount (Rp)</label>
-                <input required value={targetAmount} onChange={e=>setTargetAmount(e.target.value)} type="number" placeholder="25000000" className="w-full bg-surface-container rounded-xl px-4 py-3 font-body text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <AmountInput required value={targetAmount} onChange={setTargetAmount} placeholder="25000000" className="w-full bg-surface-container rounded-xl px-4 py-3 font-body text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
@@ -349,14 +350,11 @@ export default function Goals() {
             <form onSubmit={handleAddFundsSubmit} className="space-y-5 sm:space-y-6">
               <div>
                 <label className="block text-center text-[11px] sm:text-xs font-bold uppercase tracking-widest text-outline font-label mb-3 sm:mb-4">Amount to add (Rp)</label>
-                <input 
+                <AmountInput
                   autoFocus
                   required 
                   value={fundAmount} 
-                  onChange={e=>setFundAmount(e.target.value.replace(/[^\d]/g, ''))} 
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
+                  onChange={setFundAmount}
                   placeholder="0" 
                   className="w-full bg-transparent border-b-2 border-surface-container-high focus:border-primary text-center text-4xl sm:text-5xl font-extrabold text-on-surface font-headline focus:outline-none py-2 transition-colors placeholder:text-surface-container-highest" 
                 />

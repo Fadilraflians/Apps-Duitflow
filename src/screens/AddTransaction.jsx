@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FinanceContext } from '../context/FinanceContext';
+import AmountInput, { parseAmount } from '../components/AmountInput';
 
 const categories = [
   { name: 'Food', icon: 'restaurant' },
@@ -38,7 +39,7 @@ export default function AddTransaction() {
   const handleSave = async (event) => {
     event.preventDefault();
     if (submitting.current) return;
-    const parsedAmount = Number(amount);
+    const parsedAmount = parseAmount(amount);
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       setError('Masukkan jumlah yang lebih besar dari 0.');
       return;
@@ -89,16 +90,12 @@ export default function AddTransaction() {
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">Transaksi baru</p>
             <div className="mt-6 flex items-end gap-3">
               <span className="pb-2 text-lg font-semibold text-white/70">Rp</span>
-              <input
+              <AmountInput
                 aria-label="Jumlah transaksi"
                 className="w-full min-w-0 border-0 bg-transparent p-0 text-4xl font-extrabold tracking-tight text-white placeholder:text-white/35 focus:ring-0 sm:text-5xl"
-                inputMode="numeric"
                 placeholder="0"
-                type="number"
-                min="1"
-                step="1"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={setAmount}
                 required
               />
             </div>

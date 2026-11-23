@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
+import AmountInput, { parseAmount } from '../components/AmountInput';
 
 const formatIDR = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
@@ -27,7 +28,7 @@ export default function MoneyDetails() {
     const result = await addAccount({
       name,
       account_type: accountType,
-      initial_balance: Number(initialBalance || 0)
+      initial_balance: parseAmount(initialBalance)
     });
     setSaving(false);
     if (!result?.ok) {
@@ -96,7 +97,7 @@ export default function MoneyDetails() {
               </div>
               <label className="block text-xs font-bold text-slate-500">
                 SALDO AWAL (RP)
-                <input className="mt-2 block w-full rounded-xl border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" type="number" min="0" step="1" value={initialBalance} onChange={(event) => setInitialBalance(event.target.value)} required />
+                  <AmountInput className="mt-2 block w-full rounded-xl border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={initialBalance} onChange={setInitialBalance} required />
               </label>
               <div className="flex justify-end gap-2">
                 <button type="button" onClick={() => { setShowForm(false); setError(''); }} className="rounded-xl px-4 py-3 text-sm font-bold text-slate-500 hover:bg-white dark:hover:bg-slate-900">Batal</button>

@@ -4,6 +4,7 @@ import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
 import { GoalsContext } from '../context/GoalsContext';
 import { AuthContext } from '../context/AuthContext';
+import AmountInput, { parseAmount } from '../components/AmountInput';
 
 export default function HomeDashboard() {
   const { transactions, currentBalance, monthlySpend, monthlyIncome, showBalance, setShowBalance } = useContext(FinanceContext);
@@ -25,8 +26,8 @@ export default function HomeDashboard() {
 
   const handleUpdateLimit = (e) => {
     e.preventDefault();
-    if (newLimitAmt && !isNaN(newLimitAmt)) {
-      updateUserLimit(newLimitAmt);
+    if (newLimitAmt && parseAmount(newLimitAmt) > 0) {
+      updateUserLimit(parseAmount(newLimitAmt));
       setIsLimitModalOpen(false);
       setNewLimitAmt('');
     }
@@ -381,12 +382,11 @@ export default function HomeDashboard() {
             <form onSubmit={handleUpdateLimit} className="space-y-4">
               <div>
                 <label className="block text-center text-xs font-bold uppercase tracking-widest text-outline font-label mb-4">Monthly Goal (Rp)</label>
-                <input 
+                <AmountInput
                   autoFocus
                   required 
                   value={newLimitAmt} 
-                  onChange={e=>setNewLimitAmt(e.target.value)} 
-                  type="number" 
+                  onChange={setNewLimitAmt}
                   placeholder={monthlyLimit > 0 ? monthlyLimit.toString() : "5000000"} 
                   className="w-full bg-transparent border-b-2 border-surface-container-high focus:border-primary text-center text-4xl font-extrabold text-on-surface font-headline focus:outline-none py-2 transition-colors placeholder:text-surface-container-highest" 
                 />
