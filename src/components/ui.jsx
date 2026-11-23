@@ -173,6 +173,39 @@ export function TxRow({ tx, to, showAccount = true }) {
   return to ? <Link to={to} className={cls}>{content}</Link> : <div className={cls}>{content}</div>;
 }
 
+/**
+ * Date picker that always shows a readable label. Android Chrome renders an
+ * empty <input type="date"> as a blank box, so the native input sits invisibly
+ * on top (still opens the system picker) while we draw the label ourselves.
+ */
+export function DateField({ value, onChange, placeholder = 'Pilih tanggal', clearable = false, required = false, className = '', ...props }) {
+  const label = value ? formatDate(`${value}T12:00:00`, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : placeholder;
+  const openPicker = (e) => { try { e.currentTarget.showPicker?.(); } catch { /* not supported */ } };
+  return (
+    <div className={`field relative flex items-center gap-2.5 pr-2 focus-within:border-gold/60 focus-within:ring-4 focus-within:ring-gold/15 ${className}`}>
+      <Icon name="calendar_today" className="text-[18px] text-ink-3" />
+      <span className={`flex-1 truncate ${value ? 'text-ink' : 'text-ink-3 font-normal'}`}>{label}</span>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onClick={openPicker}
+        required={required}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        {...props}
+      />
+      {clearable && value ? (
+        <button type="button" onClick={() => onChange('')} aria-label="Hapus tanggal"
+          className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2 hover:text-ink">
+          <Icon name="close" className="text-[16px]" />
+        </button>
+      ) : (
+        <Icon name="expand_more" className="text-[20px] text-ink-3" />
+      )}
+    </div>
+  );
+}
+
 export function QuickAmounts({ amounts, onPick, prefix = '' }) {
   return (
     <div className="flex flex-wrap justify-center gap-2">
