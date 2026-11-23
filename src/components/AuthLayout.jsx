@@ -30,7 +30,7 @@ export function IconField({ icon, ...props }) {
 /** Gold line-art piggy bank with a coin dropping in — decorative only. */
 function PiggyIllustration() {
   return (
-    <div className="relative aspect-[4/3] h-full max-h-[320px] w-auto max-w-full" aria-hidden="true">
+    <div className="relative mx-auto aspect-[4/3] w-full max-w-[320px]" aria-hidden="true">
       {/* soft glow behind */}
       <div className="absolute inset-[12%] rounded-full bg-[#D6B97B]/10 blur-3xl" />
 
@@ -147,6 +147,9 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
           <ThemeButton />
         </div>
         <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10 animate-fade-up">
+          <div className="mb-5 w-full lg:hidden">
+            <PiggyIllustration />
+          </div>
           <h1 className="font-display text-[40px] leading-none tracking-tight text-ink">{title}</h1>
           <p className="mt-3 text-[15px] text-ink-2">{subtitle}</p>
           <div className="mt-8">{children}</div>
