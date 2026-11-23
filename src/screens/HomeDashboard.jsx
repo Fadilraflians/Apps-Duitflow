@@ -205,7 +205,6 @@ export default function HomeDashboard() {
         <section>
           <div className="flex justify-between items-center mb-4 px-1 mt-6">
             <h3 className="font-['Plus_Jakarta_Sans'] font-bold text-xl tracking-tight text-[#2c2f31] dark:text-slate-200">Aktivitas Terbaru</h3>
-            <Link to="/transactions" className="text-[#006a2d] dark:text-[#6bff8f] text-xs font-bold uppercase tracking-widest cursor-pointer hover:opacity-70 transition-opacity">View All</Link>
           </div>
 
           {/* Weekly Mini Chart */}
