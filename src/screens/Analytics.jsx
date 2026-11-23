@@ -5,6 +5,11 @@ import { FinanceContext } from '../context/FinanceContext';
 import { AuthContext } from '../context/AuthContext';
 import { getLastDays, localMonthKey, localDateKey } from '../utils/dates';
 
+const monthLabelForChart = (key) => {
+  const [year, month] = key.split('-').map(Number);
+  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
+};
+
 export default function Analytics() {
   const { transactions, monthlySpend, currentBalance, showBalance, setShowBalance } = useContext(FinanceContext);
   const { user } = useContext(AuthContext);
@@ -61,12 +66,12 @@ export default function Analytics() {
 
     const getColors = (cat) => {
       switch(cat) {
-        case 'Food': return { colorName: 'emerald-600', hex: '#059669', icon: 'restaurant' };
-        case 'Transport': return { colorName: 'teal-600', hex: '#0d9488', icon: 'directions_car' };
-        case 'Shopping': return { colorName: 'emerald-500', hex: '#10b981', icon: 'shopping_cart' };
-         case 'Leisure': return { colorName: 'teal-400', hex: '#2dd4bf', icon: 'theater_comedy' };
-         case 'Bills': return { colorName: 'rose-500', hex: '#f43f5e', icon: 'bolt' };
-        default: return { colorName: 'slate-300', hex: '#cbd5e1', icon: 'category' };
+        case 'Food': return { hex: '#34d399', icon: 'restaurant' };
+        case 'Transport': return { hex: '#38bdf8', icon: 'directions_car' };
+        case 'Shopping': return { hex: '#a78bfa', icon: 'shopping_bag' };
+        case 'Leisure': return { hex: '#fbbf24', icon: 'movie' };
+        case 'Bills': return { hex: '#fb7185', icon: 'receipt_long' };
+        default: return { hex: '#94a3b8', icon: 'category' };
       }
     };
 
@@ -84,23 +89,25 @@ export default function Analytics() {
     return { categories: catsArr, totalSpendForMonth: totalSpend };
   }, [transactions, distributionMonth]);
 
-  const circleLength = 502;
+  const circleLength = 2 * Math.PI * 82;
   let currentOffset = 0;
   
   const generateChartSegments = () => {
     return categories.map((cat) => {
       const segLength = (cat.percentage / 100) * circleLength;
+      const visibleLength = Math.max(0, segLength - 3);
       const segment = (
         <circle 
           key={cat.name}
-          className={`text-${cat.colorName}`} 
-          cx="96" cy="96" 
-          fill="transparent" 
-          r="80" 
-          stroke={cat.hex} 
-          strokeDasharray={`${segLength} ${circleLength - segLength}`} 
+          cx="110" cy="110"
+          fill="transparent"
+          r="82"
+          stroke={cat.hex}
+          strokeDasharray={`${visibleLength} ${circleLength - visibleLength}`}
           strokeDashoffset={-currentOffset} 
-          strokeWidth="20">
+          strokeWidth="22"
+          strokeLinecap="butt">
+          <title>{`${cat.name}: ${formatIDR(cat.amount)} (${cat.percentStr})`}</title>
         </circle>
       );
       currentOffset += segLength;
@@ -222,7 +229,7 @@ export default function Analytics() {
             
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-10 relative z-10">
               <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold font-headline mb-2 text-slate-800 dark:text-slate-100">Expense Distribution</h2>
+                <h2 className="text-xl sm:text-2xl font-extrabold font-headline mb-2 text-slate-800 dark:text-slate-100">Sebaran Pengeluaran</h2>
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">calendar_month</span>
                   <select 
@@ -241,37 +248,35 @@ export default function Analytics() {
               <span className="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-sm border border-emerald-200/50 dark:border-emerald-800/50 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Tracker</span>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center gap-10 relative z-10">
-              <div className="relative w-56 h-56 flex items-center justify-center filter drop-shadow-md">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle className="text-slate-100 dark:text-slate-800" cx="96" cy="96" fill="transparent" r="80" stroke="currentColor" strokeWidth="20"></circle>
+            <div className="flex flex-col sm:flex-row items-center gap-7 sm:gap-8 relative z-10">
+              <div className="relative h-56 w-56 shrink-0">
+                <svg viewBox="0 0 220 220" role="img" aria-label={`Sebaran pengeluaran ${monthLabelForChart(distributionMonth)}`} className="h-full w-full -rotate-90 overflow-visible drop-shadow-sm">
+                  <circle className="text-slate-100 dark:text-slate-800" cx="110" cy="110" fill="none" r="82" stroke="currentColor" strokeWidth="22"></circle>
                   {generateChartSegments()}
                 </svg>
-                <div className="absolute w-[9.5rem] h-[9.5rem] rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center text-center px-3 z-10">
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1">Total Spend</span>
-                  <span className="text-[1.35rem] leading-tight font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+                <div className="absolute inset-[2.8rem] flex flex-col items-center justify-center rounded-full border border-slate-100 bg-white/95 px-2 text-center shadow-inner dark:border-slate-800 dark:bg-slate-900/95">
+                  <span className="mb-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Total keluar</span>
+                  <span className="text-xl font-extrabold leading-tight tracking-tight text-slate-800 dark:text-slate-100">
                     {formatCompactIDR(totalSpendForMonth)}
                   </span>
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
-                    {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(totalSpendForMonth)}
-                  </span>
+                  <span className="mt-1 text-[9px] font-semibold text-slate-400 dark:text-slate-500">{categories.length} kategori</span>
                 </div>
               </div>
 
-              <div className="space-y-4 flex-1 w-full bg-slate-50/50 dark:bg-slate-950/30 p-5 rounded-2xl border border-slate-100 dark:border-slate-800/80">
+              <div className="w-full flex-1 space-y-1 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/30 sm:p-4">
                 {categories.map(item => (
-                  <div key={item.name} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-inner relative transition-transform group-hover:scale-110" style={{backgroundColor: item.hex + '15'}}>
-                        <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: item.hex}}></div>
+                  <div key={item.name} className="flex items-center justify-between gap-2 rounded-xl px-2 py-2.5 transition-colors hover:bg-white dark:hover:bg-slate-900/70">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" style={{backgroundColor: `${item.hex}20`, color: item.hex}}>
+                        <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
                       </div>
-                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{item.name}</span>
+                      <div className="min-w-0"><span className="block truncate text-xs font-bold text-slate-700 dark:text-slate-300">{item.name}</span><span className="mt-0.5 block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{item.percentStr} dari total</span></div>
                     </div>
-                    <span className="text-sm font-extrabold tracking-tight text-slate-800 dark:text-slate-200">{item.percentStr}</span>
+                    <span className="shrink-0 text-right text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-200">{formatCompactIDR(item.amount)}</span>
                   </div>
                 ))}
                 {categories.length === 0 && (
-                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400 text-center py-4">No expenses recorded.</p>
+                   <p className="py-8 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">Belum ada pengeluaran pada bulan ini.</p>
                 )}
               </div>
             </div>
