@@ -1,7 +1,7 @@
 import { useContext, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../components/AppShell';
-import { Card, EmptyState, Icon, Segmented, TxRow } from '../components/ui';
+import { Card, DateField, EmptyState, Icon, Segmented, TxRow } from '../components/ui';
 import { FinanceContext } from '../context/FinanceContext';
 import { localDateKey } from '../utils/dates';
 import { accountLabel, categoryMeta, formatDate, formatIDR, sortByNewest } from '../utils/format';
@@ -16,7 +16,7 @@ const dayHeading = (key) => {
 
 export default function Transactions() {
   const { transactions } = useContext(FinanceContext);
-  const [type, setType] = useState('all');
+  const [type, setType] = useState('income');
   const [query, setQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
@@ -49,7 +49,9 @@ export default function Transactions() {
     return t;
   }, { in: 0, out: 0 });
 
-  const hasFilter = query || filterDate || type !== 'all';
+  const hasSearchFilter = Boolean(query || filterDate);
+  const hasFilter = hasSearchFilter || type !== 'income';
+  const selectedTotal = type === 'income' ? totals.in : totals.out;
 
   return (
     <AppShell title="Transaksi" subtitle="Semua catatan pemasukan dan pengeluaranmu.">
@@ -61,8 +63,8 @@ export default function Transactions() {
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari judul, kategori, atau akun"
               className="field pl-11" aria-label="Cari transaksi" />
           </label>
-          <div className="relative sm:w-48">
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="field" aria-label="Filter tanggal" />
+          <div className="relative sm:w-60">
+            <DateField value={filterDate} onChange={setFilterDate} placeholder="Semua tanggal" clearable aria-label="Filter tanggal" />
           </div>
         </div>
         <div className="flex items-center justify-between gap-3">
@@ -70,13 +72,12 @@ export default function Transactions() {
             value={type}
             onChange={setType}
             options={[
-              { value: 'all', label: 'Semua' },
-              { value: 'income', label: 'Masuk', dot: 'rgb(var(--c-pos))' },
-              { value: 'spend', label: 'Keluar', dot: 'rgb(var(--c-neg))' },
+              { value: 'income', label: 'Uang masuk', dot: 'rgb(var(--c-pos))' },
+              { value: 'spend', label: 'Uang keluar', dot: 'rgb(var(--c-neg))' },
             ]}
           />
           {hasFilter && (
-            <button type="button" onClick={() => { setQuery(''); setFilterDate(''); setType('all'); }} className="btn-quiet py-2 text-[13px]">
+            <button type="button" onClick={() => { setQuery(''); setFilterDate(''); setType('income'); }} className="btn-quiet py-2 text-[13px]">
               <Icon name="restart_alt" className="text-[18px]" />Reset
             </button>
           )}
@@ -84,14 +85,13 @@ export default function Transactions() {
       </div>
 
       {/* Summary */}
-      <div className="mb-5 grid grid-cols-2 gap-3 animate-fade-up">
-        <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-[12px] text-ink-3"><Icon name="south_west" className="text-[16px] text-pos" />Masuk</p>
-          <p className="num mt-1 truncate text-lg font-semibold text-ink">{formatIDR(totals.in)}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="flex items-center gap-1.5 text-[12px] text-ink-3"><Icon name="north_east" className="text-[16px] text-neg" />Keluar</p>
-          <p className="num mt-1 truncate text-lg font-semibold text-ink">{formatIDR(totals.out)}</p>
+      <div className="mb-5 animate-fade-up">
+        <Card className="flex items-center justify-between gap-3 p-4">
+          <div>
+            <p className="flex items-center gap-1.5 text-[12px] text-ink-3"><Icon name={type === 'income' ? 'south_west' : 'north_east'} className={`text-[16px] ${type === 'income' ? 'text-pos' : 'text-neg'}`} />Total uang {type === 'income' ? 'masuk' : 'keluar'}</p>
+            <p className="num mt-1 truncate text-xl font-semibold text-ink">{formatIDR(selectedTotal)}</p>
+          </div>
+          <p className="shrink-0 text-right text-[12px] text-ink-3">{filtered.length} transaksi</p>
         </Card>
       </div>
 
@@ -118,9 +118,9 @@ export default function Transactions() {
         <Card className="card-pad">
           <EmptyState
             icon={hasFilter ? 'search_off' : 'receipt_long'}
-            title={hasFilter ? 'Tidak ada yang cocok' : 'Belum ada transaksi'}
-            text={hasFilter ? 'Coba ubah kata kunci, tanggal, atau jenis transaksi.' : 'Transaksi yang kamu catat akan muncul di sini.'}
-            action={!hasFilter && <Link to="/add" className="btn-primary"><Icon name="add" />Catat transaksi</Link>}
+            title={hasSearchFilter ? 'Tidak ada yang cocok' : `Belum ada uang ${type === 'income' ? 'masuk' : 'keluar'}`}
+            text={hasSearchFilter ? 'Coba ubah kata kunci atau tanggal.' : `Catatan ${type === 'income' ? 'pemasukan' : 'pengeluaran'} akan muncul di sini.`}
+            action={!hasSearchFilter && <Link to="/add" className="btn-primary"><Icon name="add" />Catat transaksi</Link>}
           />
         </Card>
       )}
