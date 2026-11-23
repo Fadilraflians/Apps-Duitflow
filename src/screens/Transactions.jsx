@@ -66,11 +66,11 @@ export default function Transactions() {
 
   const [filterDate, setFilterDate] = useState('');
   const filteredTx = useMemo(() => {
-    if (!filterDate) return sortedTx;
     return sortedTx.filter(tx => {
-      return localDateKey(tx.time) === filterDate;
+      const matchesType = activeChart === 'spend' ? tx.negative : !tx.negative;
+      return matchesType && (!filterDate || localDateKey(tx.time) === filterDate);
     });
-  }, [sortedTx, filterDate]);
+  }, [sortedTx, filterDate, activeChart]);
 
   return (
     <div className="min-h-screen bg-[#090f12] pb-28 text-slate-100">
@@ -192,7 +192,7 @@ export default function Transactions() {
         {/* Transactions Table/List */}
         <section className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-[0_8px_24px_rgba(0,0,0,0.04)] dark:border dark:border-slate-800">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-base">Semua Transaksi</h2>
+            <h2 className="font-['Plus_Jakarta_Sans'] font-bold text-base">Daftar Uang {activeChart === 'income' ? 'Masuk' : 'Keluar'}</h2>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {filterDate && (
                 <button
@@ -212,7 +212,7 @@ export default function Transactions() {
             </div>
           </div>
           <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
-            {filteredTx.length} items found
+            {filteredTx.length} transaksi {activeChart === 'income' ? 'masuk' : 'keluar'}
           </div>
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {filteredTx.map((tx) => (
@@ -264,7 +264,7 @@ export default function Transactions() {
 
             {filteredTx.length === 0 && (
               <div className="text-center py-10 text-sm text-slate-500 dark:text-slate-400">
-                {filterDate ? 'Tidak ada transaksi pada tanggal ini.' : 'Belum ada transaksi yang tercatat.'}
+                {filterDate ? `Tidak ada transaksi ${activeChart === 'income' ? 'masuk' : 'keluar'} pada tanggal ini.` : `Belum ada transaksi ${activeChart === 'income' ? 'masuk' : 'keluar'} yang tercatat.`}
               </div>
             )}
           </div>
