@@ -9,6 +9,8 @@ do not exist.
 1. Rotate any password shared in a screenshot, then copy `.env.example` to
    `.env` and set `DATABASE_URL` using the new Aiven credentials. Keep `.env`
    out of Git.
+   For the configured Aiven project, setting `DB_PASSWORD` alone also uses the
+   project's default host, user, database, and port.
 2. For stronger certificate verification, copy Aiven's CA certificate into
    `DB_CA_CERT`. Without it, connections still use TLS encryption but do not
    verify the database certificate.

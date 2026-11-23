@@ -12,7 +12,9 @@ app.use(express.json());
 
 const { Pool } = pg;
 const databaseUrl = process.env.DATABASE_URL;
-const dbHost = process.env.DB_HOST || '';
+const defaultAivenHost = 'pg-668154f-duitflow.k.aivencloud.com';
+const hasAivenPassword = Boolean(process.env.DB_PASSWORD);
+const dbHost = process.env.DB_HOST || (hasAivenPassword ? defaultAivenHost : '');
 const dbCaCert = process.env.DB_CA_CERT?.replace(/\\n/g, '\n');
 const isRemoteDatabase = databaseUrl
   ? !['localhost', '127.0.0.1'].includes(new URL(databaseUrl).hostname)
@@ -38,10 +40,10 @@ if (isRemoteDatabase && databaseUrl) {
 const pool = new Pool({
   ...(connectionString ? { connectionString } : {
     host: dbHost || 'localhost',
-    user: process.env.DB_USER || 'postgres',
+    user: process.env.DB_USER || (hasAivenPassword ? 'avnadmin' : 'postgres'),
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'defaultdb',
-    port: Number(process.env.DB_PORT || 5432)
+    port: Number(process.env.DB_PORT || (dbHost.includes('aivencloud') ? 23819 : 5432))
   }),
   ...(ssl ? { ssl } : {}),
   max: Number(process.env.DB_POOL_MAX || 5),
