@@ -26,8 +26,8 @@ export default function CashflowDetails() {
   );
 
   return (
-    <div className="bg-[#f5f7f9] dark:bg-slate-950 min-h-screen pb-28 text-[#2c2f31] dark:text-slate-100">
-      <header className="w-full top-0 sticky z-50 bg-[#f5f7f9]/90 dark:bg-slate-950/90 backdrop-blur border-b border-slate-200/60 dark:border-slate-800 flex items-center justify-between px-6 py-4">
+    <div className="min-h-screen bg-[#090f12] pb-28 text-slate-100">
+      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-[#10191d]/90 px-6 py-4 backdrop-blur-xl">
         <button
           type="button"
           onClick={() => navigate(-1)}

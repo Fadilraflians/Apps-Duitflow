@@ -6,11 +6,35 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    color-scheme: dark;
+    --lux-bg: #090f12;
+    --lux-panel: #111a1f;
+    --lux-panel-raised: #162126;
+    --lux-border: rgba(189, 218, 201, 0.1);
+    --lux-text: #e8f1ec;
+    --lux-muted: #9aa9a1;
+    --lux-green: #63dda5;
+    --lux-gold: #d7b876;
+  }
+
+  html, body, #root { min-height: 100%; background: var(--lux-bg); }
   body { 
     @apply bg-surface text-on-surface;
     font-family: 'Manrope', sans-serif;
-    min-height: max(884px, 100dvh);
+    min-height: 100dvh;
+    color: var(--lux-text);
+    background-image:
+      radial-gradient(ellipse at 12% 0%, rgba(44, 116, 82, 0.18), transparent 34rem),
+      radial-gradient(ellipse at 92% 12%, rgba(111, 88, 47, 0.12), transparent 30rem);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
+
+  button, input, select, textarea { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: rgba(99, 221, 165, 0.28); color: #fff; }
 }
 
 @layer utilities {
@@ -24,6 +48,47 @@
   }
   .custom-glass {
     backdrop-filter: blur(20px);
-    background: rgba(255, 255, 255, 0.8);
+    background: rgba(17, 26, 31, 0.82);
+    border: 1px solid var(--lux-border);
   }
 }
+
+/* A cohesive midnight palette for older screens that still use light utility classes. */
+[class~="bg-white"] { background-color: var(--lux-panel) !important; background-image: linear-gradient(145deg, rgba(255,255,255,0.025), transparent 58%); }
+[class~="bg-white/60"], [class~="bg-white/70"], [class~="bg-white/80"], [class~="bg-white/85"], [class~="bg-white/90"], [class~="bg-white/95"] { background-color: rgba(17, 26, 31, 0.9) !important; }
+[class~="bg-slate-50"] { background-color: #0c1418 !important; }
+[class~="bg-slate-100"] { background-color: #172227 !important; }
+[class~="bg-slate-200"] { background-color: #26343a !important; }
+[class~="bg-emerald-50"], [class~="bg-emerald-100"] { background-color: rgba(51, 137, 95, 0.2) !important; }
+[class~="bg-blue-50"], [class~="bg-blue-100"] { background-color: rgba(53, 112, 171, 0.2) !important; }
+[class~="bg-amber-50"], [class~="bg-amber-100"] { background-color: rgba(176, 129, 52, 0.2) !important; }
+[class~="bg-violet-50"], [class~="bg-violet-100"] { background-color: rgba(127, 90, 171, 0.2) !important; }
+[class~="bg-rose-50"], [class~="bg-rose-100"] { background-color: rgba(174, 67, 78, 0.2) !important; }
+[class~="bg-[#f5f7f9]"] { background-color: var(--lux-bg) !important; }
+[class~="bg-[#f7faf8]"] { background-color: var(--lux-bg) !important; }
+[class~="bg-[#f2f6f3]"] { background-color: var(--lux-bg) !important; }
+[class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"] { color: var(--lux-text) !important; }
+[class~="text-[#2c2f31]"] { color: var(--lux-text) !important; }
+[class~="text-slate-600"], [class~="text-slate-500"], [class~="text-slate-400"] { color: var(--lux-muted) !important; }
+[class~="border-slate-200"], [class~="border-slate-100"], [class~="border-slate-300"] { border-color: var(--lux-border) !important; }
+[class~="text-[#006a2d]"] { color: var(--lux-green) !important; }
+[class~="text-[#595c5e]"] { color: var(--lux-muted) !important; }
+[class~="text-emerald-800"], [class~="text-emerald-700"] { color: #8ce5b6 !important; }
+[class~="text-blue-700"] { color: #9bc9f1 !important; }
+[class~="text-amber-700"] { color: #e7c579 !important; }
+[class~="text-violet-700"] { color: #c7a5ea !important; }
+[class~="text-rose-700"] { color: #f3a5ad !important; }
+[class~="bg-[#006a2d]"] { background-color: #184b35 !important; }
+
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  color: var(--lux-text);
+}
+input::placeholder, textarea::placeholder { color: #74837c; }
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  border-color: var(--lux-border);
+  background-color: #0d1519;
+}
+input:focus, select:focus, textarea:focus { --tw-ring-color: rgba(99, 221, 165, 0.3) !important; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #090f12; }
+::-webkit-scrollbar-thumb { background: #273830; border: 2px solid #090f12; border-radius: 999px; }

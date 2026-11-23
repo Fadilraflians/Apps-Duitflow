@@ -35,7 +35,7 @@ export default function Register() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col items-center">
-      <header className="w-full top-0 sticky bg-[#f5f7f9] flex justify-between items-center px-6 py-4 z-50">
+      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-[#10191d]/90 px-6 py-4 backdrop-blur-xl">
         <div className="text-2xl font-bold text-[#006a2d] tracking-tight font-headline">
           DuitFlow
         </div>

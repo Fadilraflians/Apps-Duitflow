@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
@@ -41,7 +41,7 @@ export default function HomeDashboard() {
   const spendPctRaw = monthlyLimit > 0 ? (monthlySpend / monthlyLimit) * 100 : 0;
   const spendPct = Math.min(spendPctRaw, 100).toFixed(0);
   
-  let barColorClass = "bg-[#006a2d] dark:bg-[#6bff8f]"; // default Green/Primary
+  let barColorClass = "bg-emerald-300";
   let warningMessage = null;
 
   if (spendPctRaw >= 100) {
@@ -60,7 +60,7 @@ export default function HomeDashboard() {
   const isBalanceNegative = currentBalance < 0;
   
   // Spend series for 7 consecutive days ending at latest recorded date
-  const weeklySpendSeries = React.useMemo(() => {
+  const weeklySpendSeries = useMemo(() => {
     const dailyMap = new Map();
     const spendTx = transactions.filter((tx) => tx.negative);
     let latestDate = spendTx.length > 0 ? new Date(spendTx[0].time) : new Date();
@@ -113,23 +113,23 @@ export default function HomeDashboard() {
     .slice(0, 5);
 
   return (
-    <div className="bg-[#f5f7f9] dark:bg-slate-950 font-['Manrope'] text-[#2c2f31] dark:text-slate-200 min-h-screen pb-24 transition-colors">
+    <div className="min-h-screen bg-[#090f12] pb-28 font-['Manrope'] text-slate-100 transition-colors">
       
       {/* Top App Bar */}
       <div className="flex justify-between items-center p-6 pb-2">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-[#6bff8f] dark:bg-[#004a1d] rounded-full overflow-hidden flex items-center justify-center cursor-pointer shadow-sm">
-             <span className="material-symbols-outlined text-[#004a1d] dark:text-[#6bff8f]">person</span>
+          <div className="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-emerald-300/15 bg-[#173a2d] shadow-inner">
+             <span className="material-symbols-outlined text-emerald-200">person</span>
           </div>
           <div>
             <h1 className="font-['Plus_Jakarta_Sans'] font-bold text-xl leading-none tracking-tight">Hi, {user ? user.full_name?.split(' ')[0] : 'Guest'}</h1>
-            <p className="text-[#595c5e] dark:text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Ready to flow?</p>
+            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Ready to flow?</p>
           </div>
         </div>
         <button className="material-symbols-outlined text-[#595c5e] dark:text-slate-400 hover:text-[#006a2d] transition-colors p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800">notifications</button>
       </div>
 
-      <main className="px-6 space-y-6 mt-4 max-w-lg mx-auto">
+      <main className="mx-auto mt-4 max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
         
         {/* Warning Banner */}
         {monthlyLimit > 0 && warningMessage && (
@@ -141,7 +141,7 @@ export default function HomeDashboard() {
 
         {/* Balance Section */}
         <div className="mt-4 mb-6">
-          <div className="bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative overflow-hidden group">
+          <div className="relative overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] md:p-8 group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
 
@@ -179,19 +179,19 @@ export default function HomeDashboard() {
         <div className="grid grid-cols-2 gap-4">
           
           {/* Spending Card (Dynamic with Limit logic) */}
-          <div className="bg-[#73fbbc] dark:bg-[#004a1d] rounded-2xl p-5 flex flex-col justify-between aspect-square group shadow-[0_8px_24px_rgba(115,251,188,0.2)] dark:shadow-none hover:shadow-[0_12px_32px_rgba(115,251,188,0.3)] transition-all">
+          <div className="flex aspect-square flex-col justify-between rounded-2xl border border-emerald-200/10 bg-gradient-to-br from-[#13251f] to-[#173c2d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.18)] transition-all hover:border-emerald-200/20">
             <div>
-              <span className="text-[#004a1d] dark:text-[#6bff8f]/70 text-[9px] font-bold uppercase tracking-widest">Today's Spending</span>
-              <p className="font-['Plus_Jakarta_Sans'] text-[#004a1d] dark:text-[#6bff8f] font-extrabold text-xl mt-1 tracking-tight">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-100/65">Today's Spending</span>
+              <p className="mt-1 font-['Plus_Jakarta_Sans'] text-xl font-extrabold tracking-tight text-emerald-50">
                 {formatIDR(dailySpend)}
               </p>
             </div>
             
             <div className="mt-4">
-              <div className="w-full h-2 bg-[#006a2d]/20 dark:bg-black/30 rounded-full overflow-hidden mb-2">
+              <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-black/30">
                 <div className={`h-full rounded-full transition-all duration-1000 ${barColorClass}`} style={{ width: `${spendPct}%` }}></div>
               </div>
-              <div className="flex justify-between items-center text-[9px] text-[#004a1d] dark:text-[#6bff8f]/80 font-bold uppercase tracking-wider">
+              <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-emerald-100/70">
                 <span>{spendPct}% of limit</span>
                 <button onClick={() => setIsLimitModalOpen(true)} className="hover:underline flex items-center gap-1 group-hover:text-white transition-colors">
                   {monthlyLimit > 0 ? `${formatIDR(monthlyLimit)} limit` : 'Set Limit'}
@@ -216,7 +216,7 @@ export default function HomeDashboard() {
             {/* Micro Interaction Avatars */}
             <div className="flex -space-x-2 mt-2">
               <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[8px] font-bold">G</div>
-              <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-[#6bff8f] flex items-center justify-center text-[8px] font-bold font-['Manrope'] text-[#004a1d]">+{priorityGoal ? '1' : '0'}</div>
+          <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-900 bg-emerald-300 font-['Manrope'] text-[8px] font-bold text-slate-950">+{priorityGoal ? '1' : '0'}</div>
             </div>
           </Link>
         </div>

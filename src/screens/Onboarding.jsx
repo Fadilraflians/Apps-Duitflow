@@ -29,7 +29,7 @@ export default function Onboarding() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-6 pt-4">
-            <Link to="/register" className="w-full sm:w-auto px-10 py-5 bg-gradient-to-br from-primary to-primary-dim text-primary-container rounded-full font-bold text-lg editorial-shadow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+            <Link to="/register" className="flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-br from-primary to-primary-dim px-10 py-5 text-lg font-bold text-on-primary shadow-[0_14px_34px_rgba(70,210,145,0.2)] transition-all hover:scale-[1.02] active:scale-95 sm:w-auto">
               Get Started
               <span className="material-symbols-outlined text-2xl">arrow_forward</span>
             </Link>

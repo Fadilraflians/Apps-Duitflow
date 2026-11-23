@@ -27,7 +27,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="bg-gradient-to-b from-[#f7faf8] via-white to-[#f2f6f3] text-on-surface min-h-screen pb-32 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+    <div className="min-h-screen bg-[#090f12] pb-32 text-on-surface">
       {/* TopAppBar */}
       <header className="w-full top-0 sticky z-50 backdrop-blur bg-white/85 dark:bg-slate-950/80 border-b border-slate-200/60 dark:border-slate-800 flex justify-between items-center px-6 py-4">
         <div className="flex items-center gap-3">
@@ -61,7 +61,7 @@ export default function Profile() {
 
         {/* Subscription Card  */}
         <section className="mb-8 group transform hover:scale-[1.01] transition-all duration-300">
-          <div className="bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white p-6 sm:p-8 rounded-3xl relative overflow-hidden flex flex-col justify-between h-auto min-h-[11rem] shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)]">
+          <div className="relative flex h-auto min-h-[11rem] flex-col justify-between overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] sm:p-8">
             {/* Decorative Glows */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/20 transition-all duration-700 pointer-events-none"></div>
             <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>

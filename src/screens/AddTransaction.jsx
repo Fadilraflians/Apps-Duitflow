@@ -75,7 +75,7 @@ export default function AddTransaction() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 pb-10 pt-5 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:pt-8">
+    <div className="min-h-screen bg-[#090f12] px-4 pb-10 pt-5 text-slate-100 sm:px-6 sm:pt-8">
       <main className="mx-auto max-w-2xl">
         <header className="mb-6 flex items-center justify-between">
           <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-emerald-700 dark:hover:bg-slate-900">
@@ -85,7 +85,7 @@ export default function AddTransaction() {
         </header>
 
         <form onSubmit={handleSave} className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
-          <div className={`px-6 pb-8 pt-7 text-white sm:px-9 ${isIncome ? 'bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500' : 'bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950'}`}>
+          <div className={`border-b border-white/10 px-6 pb-8 pt-7 text-white sm:px-9 ${isIncome ? 'bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552]' : 'bg-gradient-to-br from-[#10171b] via-[#142027] to-[#172c28]'}`}>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">Transaksi baru</p>
             <div className="mt-6 flex items-end gap-3">
               <span className="pb-2 text-lg font-semibold text-white/70">Rp</span>

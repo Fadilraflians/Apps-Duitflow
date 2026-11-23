@@ -79,7 +79,7 @@ export default function Goals() {
   const secondaryGoals = goals.filter(g => !g.is_priority);
 
   return (
-    <div className="bg-gradient-to-b from-[#f7faf8] via-white to-[#eef5f1] dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 selection:bg-primary-container selection:text-on-primary-container min-h-screen text-on-surface pb-32">
+    <div className="min-h-screen bg-[#090f12] pb-32 text-on-surface selection:bg-primary-container selection:text-on-primary-container">
       {/* Top App Bar */}
       <header className="w-full top-0 sticky z-50 backdrop-blur bg-white/85 dark:bg-slate-950/85 border-b border-slate-200/60 dark:border-slate-800 flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex items-center gap-3">
@@ -129,7 +129,7 @@ export default function Goals() {
         {/* Priority Goal */}
         {priorityGoal && (
           <section className="mb-8 sm:mb-12 relative group transform hover:scale-[1.01] transition-all duration-300">
-            <div className="bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div className="relative overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] sm:p-8">
               {/* Decorative Glows */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/20 transition-all duration-700 pointer-events-none"></div>
               <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
@@ -203,7 +203,7 @@ export default function Goals() {
                 </div>
                 <button 
                   onClick={() => openFundModal(priorityGoal)}
-                  className="bg-white text-emerald-800 dark:bg-emerald-400 dark:text-slate-900 px-5 sm:px-6 py-2.5 rounded-full font-label text-[10px] sm:text-xs font-extrabold tracking-widest uppercase hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-900/20 whitespace-nowrap"
+                  className="whitespace-nowrap rounded-full bg-emerald-300 px-5 py-2.5 font-label text-[10px] font-extrabold uppercase tracking-widest text-slate-950 shadow-lg shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 sm:px-6 sm:text-xs"
                 >
                   Add Funds
                 </button>

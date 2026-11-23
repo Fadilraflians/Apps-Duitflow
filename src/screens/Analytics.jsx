@@ -174,7 +174,7 @@ export default function Analytics() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen pb-32">
-      <header className="w-full top-0 sticky z-50 bg-[#f5f7f9] dark:bg-slate-950 flex justify-between items-center px-6 py-4">
+      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-[#10191d]/90 px-6 py-4 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-container flex items-center justify-center">
             <img alt="User profile avatar" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCISr3xVrhcxN-TIZ_oVcpBC9j0tYqm2vpjBo_jNJhvbKpqRW7tWsa1TQtoz7jhvrOD_5WvZGg4i_FN9xIdSi4TH7qIc2lOdjCREvMuHpkLQfkamPNHShxlD0_kDQgevrF5MrdH2OFXoQ8qsvlQBLl9gJSBkgLLlSS6vn67CZVahLpR6WNi41pyqNGkmBHRMoEsmHmBo-Ubqo8Pf5HxC9RjSOa9Nhs8wZtq06YNzgZLZCfAb31kePv4UBQLYwj2Z8qyzXasaRDatzQ5" />
@@ -192,7 +192,7 @@ export default function Analytics() {
           <h1 className="text-4xl font-extrabold text-on-surface tracking-tight">Monthly Analytics</h1>
         </section>
 
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] group transform hover:scale-[1.01] transition-all duration-300">
+        <section className="group relative overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] transition-all duration-300 hover:scale-[1.01] md:p-8">
           {/* Abstract glows */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-all duration-500 pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
@@ -227,7 +227,7 @@ export default function Analytics() {
             <p className="text-xs text-white/80 font-medium tracking-wide">Pantau perputaran uangmu.</p>
             <Link
               to="/money-details"
-              className="inline-flex items-center gap-1.5 bg-white text-emerald-800 dark:bg-emerald-400 dark:text-slate-900 px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-900/20"
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-300 px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-950 shadow-lg shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95"
             >
               Lihat Detail
               <span className="material-symbols-outlined text-sm">arrow_forward</span>
