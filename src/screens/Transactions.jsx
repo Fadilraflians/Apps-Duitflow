@@ -4,6 +4,14 @@ import { FinanceContext } from '../context/FinanceContext';
 import BottomNavBar from '../components/BottomNavBar';
 import { localDateKey } from '../utils/dates';
 
+const formatTransactionDate = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Tanggal tidak tersedia';
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+  }).format(date);
+};
+
 export default function Transactions() {
   const { transactions } = useContext(FinanceContext);
   const [activeChart, setActiveChart] = useState('income');
@@ -234,11 +242,8 @@ export default function Transactions() {
                     <p className="text-sm font-semibold">{tx.title}</p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
                       {tx.category} •{' '}
-                      {new Intl.DateTimeFormat('id-ID', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: '2-digit'
-                      }).format(new Date(tx.time))}
+                      <span className="material-symbols-outlined mr-1 align-middle text-[12px]">calendar_today</span>
+                      {formatTransactionDate(tx.time)}
                     </p>
                     <span
                       className={`inline-flex mt-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${
