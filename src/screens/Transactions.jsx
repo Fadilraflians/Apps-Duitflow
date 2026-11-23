@@ -54,7 +54,7 @@ export default function Transactions() {
   const selectedTotal = type === 'income' ? totals.in : totals.out;
 
   return (
-    <AppShell title="Transaksi" subtitle="Semua catatan pemasukan dan pengeluaranmu.">
+    <AppShell title="Transaksi" subtitle="Pilih Masuk atau Keluar untuk melihat transaksi sejenis saja.">
       {/* Filters */}
       <div className="mb-5 space-y-3 animate-fade-up">
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -72,8 +72,8 @@ export default function Transactions() {
             value={type}
             onChange={setType}
             options={[
-              { value: 'income', label: 'Uang masuk', dot: 'rgb(var(--c-pos))' },
-              { value: 'spend', label: 'Uang keluar', dot: 'rgb(var(--c-neg))' },
+              { value: 'income', label: 'Masuk', dot: 'rgb(var(--c-pos))' },
+              { value: 'spend', label: 'Keluar', dot: 'rgb(var(--c-neg))' },
             ]}
           />
           {hasFilter && (
