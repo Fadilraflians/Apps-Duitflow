@@ -1,27 +1,20 @@
 import { useContext, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import BottomNavBar from '../components/BottomNavBar';
+import AppShell from '../components/AppShell';
+import { Bars } from '../components/charts';
+import { Alert, Card, EmptyState, Icon, Modal, ProgressBar, QuickAmounts, SectionHeader, TxRow } from '../components/ui';
+import AmountInput, { parseAmount } from '../components/AmountInput';
 import { FinanceContext } from '../context/FinanceContext';
 import { GoalsContext } from '../context/GoalsContext';
 import { AuthContext } from '../context/AuthContext';
-import AmountInput, { parseAmount } from '../components/AmountInput';
 import { getLastDays, localDateKey } from '../utils/dates';
+import { firstNameOf, formatDate, formatIDR, greeting, sortByNewest } from '../utils/format';
 
 export default function HomeDashboard() {
   const { transactions, currentBalance, monthlySpend, monthlyIncome, showBalance, setShowBalance } = useContext(FinanceContext);
   const { goals } = useContext(GoalsContext);
   const { user, updateUserLimit } = useContext(AuthContext);
-  const accountLabel = (tx) =>
-    tx.account_name || (String(tx.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA');
 
-  const formatIDR = (value) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value);
-  };
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [newLimitAmt, setNewLimitAmt] = useState('');
 
@@ -36,355 +29,201 @@ export default function HomeDashboard() {
 
   const todayKey = localDateKey(new Date());
   const dailySpend = transactions
-    .filter(tx => tx.negative && localDateKey(tx.time) === todayKey)
+    .filter((tx) => tx.negative && localDateKey(tx.time) === todayKey)
     .reduce((acc, tx) => acc + tx.amount, 0);
 
-  // Determine budget warnings
-  const monthlyLimit = user?.monthly_limit || 0;
-  const spendPctRaw = monthlyLimit > 0 ? (monthlySpend / monthlyLimit) * 100 : 0;
-  const spendPct = Math.min(spendPctRaw, 100).toFixed(0);
-  
-  let barColorClass = "bg-emerald-300";
-  let warningMessage = null;
+  const monthlyLimit = Number(user?.monthly_limit) || 0;
+  const spendPct = monthlyLimit > 0 ? (monthlySpend / monthlyLimit) * 100 : 0;
+  const budgetTone = spendPct >= 100 ? 'neg' : spendPct >= 80 ? 'warn' : 'gold';
+  const remaining = Math.max(monthlyLimit - monthlySpend, 0);
 
-  if (spendPctRaw >= 100) {
-    barColorClass = "bg-error";
-    warningMessage = "CRITICAL: You have exceeded your monthly budget!";
-  } else if (spendPctRaw >= 80) {
-    barColorClass = "bg-yellow-500 dark:bg-yellow-400";
-    warningMessage = "WARNING: You are nearing your monthly limit!";
-  }
+  const priorityGoal = goals.find((g) => g.is_priority) || goals[0];
+  const goalPct = priorityGoal && priorityGoal.target_amount > 0
+    ? Math.min((priorityGoal.saved_amount / priorityGoal.target_amount) * 100, 100)
+    : 0;
 
-  const priorityGoal = goals.find(g => g.is_priority) || goals[0];
-  const goalPct = priorityGoal && priorityGoal.target_amount > 0 ? Math.min((priorityGoal.saved_amount / priorityGoal.target_amount) * 100, 100).toFixed(0) : 0;
-
-  // Absolute format for Balance to strip "-" 
-  const absBalance = Math.abs(currentBalance);
-  const isBalanceNegative = currentBalance < 0;
-  
-  // Spend series for the current day and six calendar days before it.
-  const weeklySpendSeries = useMemo(() => {
+  const weekly = useMemo(() => {
     const dailyMap = new Map();
     transactions.filter((tx) => tx.negative).forEach((tx) => {
       const key = localDateKey(tx.time);
       if (key) dailyMap.set(key, (dailyMap.get(key) || 0) + Number(tx.amount || 0));
     });
-    return getLastDays(7).map(({ key, label }) => ({ key, label, total: dailyMap.get(key) || 0 }));
+    return getLastDays(7).map(({ key, date }) => ({
+      key,
+      label: date.toLocaleDateString('id-ID', { weekday: 'short' }),
+      fullLabel: date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short' }),
+      total: dailyMap.get(key) || 0,
+    }));
   }, [transactions, todayKey]);
+  const weeklyTotal = weekly.reduce((s, d) => s + d.total, 0);
 
-  const weeklyMax = Math.max(...weeklySpendSeries.map((d) => d.total), 0);
-  const spendRangeLabel =
-    weeklySpendSeries[0]?.label === weeklySpendSeries[weeklySpendSeries.length - 1]?.label
-      ? weeklySpendSeries[0]?.label
-      : `${weeklySpendSeries[0]?.label} - ${weeklySpendSeries[weeklySpendSeries.length - 1]?.label}`;
-  const savingsPct =
-    monthlyIncome > 0 ? Math.round(((monthlyIncome - monthlySpend) / monthlyIncome) * 100) : 0;
-  const chartPad = { left: 6, right: 6 };
-  const xAt = (idx, total) => {
-    if (total <= 1) return 50;
-    return chartPad.left + (idx / (total - 1)) * (100 - chartPad.left - chartPad.right);
-  };
-  const recentTransactions = [...transactions]
-    .sort((a, b) => {
-      const byTime = new Date(b.time).getTime() - new Date(a.time).getTime();
-      if (byTime !== 0) return byTime;
-      return (Number(b.id) || 0) - (Number(a.id) || 0);
-    })
-    .slice(0, 5);
+  const recent = sortByNewest(transactions).slice(0, 5);
+  const hidden = 'Rp ••••••';
 
   return (
-    <div className="min-h-screen bg-[#090f12] pb-28 font-['Manrope'] text-slate-100 transition-colors">
-      
-      {/* Top App Bar */}
-      <div className="flex justify-between items-center p-6 pb-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-emerald-300/15 bg-[#173a2d] shadow-inner">
-             <span className="material-symbols-outlined text-emerald-200">person</span>
-          </div>
-          <div>
-            <h1 className="font-['Plus_Jakarta_Sans'] font-bold text-xl leading-none tracking-tight">Hi, {user ? user.full_name?.split(' ')[0] : 'Guest'}</h1>
-            <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Ready to flow?</p>
-          </div>
-        </div>
-        <button className="material-symbols-outlined text-[#595c5e] dark:text-slate-400 hover:text-[#006a2d] transition-colors p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800">notifications</button>
-      </div>
-
-      <main className="mx-auto mt-4 max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
-        
-        {/* Warning Banner */}
-        {monthlyLimit > 0 && warningMessage && (
-          <div className={`p-4 rounded-xl text-sm font-bold flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${spendPctRaw >= 100 ? 'bg-error text-on-error shadow-error/20' : 'bg-yellow-500 text-slate-900 shadow-yellow-500/20'} shadow-lg`}>
-            <span className="material-symbols-outlined">warning</span>
-            {warningMessage}
-          </div>
-        )}
-
-        {/* Balance Section */}
-        <div className="mt-4 mb-6">
-          <div className="relative overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] md:p-8 group">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
-
-            <div className="flex items-center gap-2 mb-2 relative z-10">
-              <p className="font-['Plus_Jakarta_Sans'] font-bold text-[10px] uppercase tracking-[0.2em] text-emerald-100 dark:text-slate-400 drop-shadow-sm">Current Balance</p>
-              <button onClick={() => setShowBalance(!showBalance)} className="text-emerald-100/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-5 h-5 flex items-center justify-center backdrop-blur shadow-sm">
-                <span className="material-symbols-outlined text-[12px]">{showBalance ? 'visibility' : 'visibility_off'}</span>
-              </button>
-            </div>
-            <div className="flex items-center gap-3 relative z-10">
-              <h2 className={`font-['Plus_Jakarta_Sans'] font-extrabold text-4xl lg:text-5xl tracking-tighter drop-shadow-md ${isBalanceNegative ? 'text-rose-300' : 'text-white'}`}>
-                {showBalance ? formatIDR(absBalance) : 'Rp •••••••'}
-              </h2>
-              {!isBalanceNegative && (
-                <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white shadow-sm font-bold text-xs px-2.5 py-1 rounded-full mb-1">
-                  {savingsPct >= 0 ? '+' : ''}{savingsPct}%
-                </span>
-              )}
-            </div>
-
-            <div className="mt-8 flex items-center justify-between relative z-10">
-              <Link to="/money-details" className="bg-white/15 hover:bg-white/25 active:bg-white/30 transition-colors backdrop-blur-md border border-white/20 text-white text-xs font-bold px-4 py-2 rounded-full uppercase tracking-widest inline-flex items-center gap-1 shadow-sm">
-                Lihat Detail <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </Link>
-              <div className="flex gap-2">
-                 <Link to="/add" className="w-10 h-10 rounded-full bg-white text-emerald-700 dark:bg-slate-800 dark:text-emerald-400 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-lg">
-                   <span className="material-symbols-outlined text-lg">add</span>
-                 </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bento Grid layout */}
-        <div className="grid grid-cols-2 gap-4">
-          
-          {/* Spending Card (Dynamic with Limit logic) */}
-          <div className="flex aspect-square flex-col justify-between rounded-2xl border border-emerald-200/10 bg-gradient-to-br from-[#13251f] to-[#173c2d] p-5 shadow-[0_18px_42px_rgba(0,0,0,0.18)] transition-all hover:border-emerald-200/20">
-            <div>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-100/65">Today's Spending</span>
-              <p className="mt-1 font-['Plus_Jakarta_Sans'] text-xl font-extrabold tracking-tight text-emerald-50">
-                {formatIDR(dailySpend)}
-              </p>
-            </div>
-            
-            <div className="mt-4">
-              <div className="mb-2 h-2 w-full overflow-hidden rounded-full bg-black/30">
-                <div className={`h-full rounded-full transition-all duration-1000 ${barColorClass}`} style={{ width: `${spendPct}%` }}></div>
-              </div>
-              <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-emerald-100/70">
-                <span>{spendPct}% of limit</span>
-                <button onClick={() => setIsLimitModalOpen(true)} className="hover:underline flex items-center gap-1 group-hover:text-white transition-colors">
-                  {monthlyLimit > 0 ? `${formatIDR(monthlyLimit)} limit` : 'Set Limit'}
-                  <span className="material-symbols-outlined text-[10px]">edit</span>
+    <AppShell
+      title={`${greeting()}, ${firstNameOf(user)}`}
+      subtitle={formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      wide
+    >
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          {/* Hero balance card */}
+          <section className="lux-card animate-fade-up p-6 sm:p-8">
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-[#F2EFE8]/60">Total saldo</p>
+                <button type="button" onClick={() => setShowBalance(!showBalance)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-[#F2EFE8]/80 transition hover:bg-white/15"
+                  aria-label={showBalance ? 'Sembunyikan saldo' : 'Tampilkan saldo'}>
+                  <Icon name={showBalance ? 'visibility' : 'visibility_off'} className="text-[18px]" />
                 </button>
               </div>
-            </div>
-          </div>
+              <p className={`num mt-3 text-[40px] font-semibold leading-none sm:text-[52px] ${currentBalance < 0 ? 'text-[#F5A3A3]' : ''}`}>
+                {showBalance ? `${currentBalance < 0 ? '−' : ''}${formatIDR(Math.abs(currentBalance))}` : hidden}
+              </p>
 
-          {/* Goal Priority Card */}
-          <Link to="/goals" className="block bg-white dark:bg-slate-900 rounded-2xl p-5 flex flex-col justify-between aspect-square shadow-[0_8px_24px_rgba(0,0,0,0.04)] hover:shadow-lg transition-all dark:border dark:border-slate-800 group">
-            <div className="flex justify-between items-start">
-              <div className="text-[#006575] dark:text-[#00dcfe] group-hover:scale-110 transition-transform">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>radar</span>
-              </div>
-              <span className="text-[#006575] dark:text-[#00dcfe] text-[9px] font-bold uppercase tracking-widest">Active Goal</span>
-            </div>
-            <div className="mt-2">
-              <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm tracking-tight text-[#2c2f31] dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">{priorityGoal ? priorityGoal.title : 'No Goal'}</p>
-              <p className="text-[#595c5e] dark:text-slate-400 text-xs">{goalPct}% completed</p>
-            </div>
-            {/* Micro Interaction Avatars */}
-            <div className="flex -space-x-2 mt-2">
-              <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[8px] font-bold">G</div>
-          <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-900 bg-emerald-300 font-['Manrope'] text-[8px] font-bold text-slate-950">+{priorityGoal ? '1' : '0'}</div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Recent Activity List */}
-        <section>
-          <div className="flex justify-between items-center mb-4 px-1 mt-6">
-            <h3 className="font-['Plus_Jakarta_Sans'] font-bold text-xl tracking-tight text-[#2c2f31] dark:text-slate-200">Aktivitas Terbaru</h3>
-          </div>
-
-          {/* Weekly Mini Chart */}
-          <div className="bg-white dark:bg-slate-900 p-4 rounded-[1rem] shadow-[0_4px_12px_rgba(0,0,0,0.02)] dark:border dark:border-slate-800 mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-[#2c2f31] dark:text-slate-200">Spend Trend</p>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#595c5e] dark:text-slate-400">
-                {spendRangeLabel}
-              </span>
-            </div>
-            <div className="relative h-28 mt-4 mb-2">
-              <svg className="absolute inset-0 w-full h-full overflow-visible">
-                <line x1="6%" y1="85%" x2="94%" y2="85%" stroke="rgba(148,163,184,0.28)" strokeWidth="1" />
-                {weeklySpendSeries.map((day, idx) => {
-                  if (idx === 0) return null;
-                  const prev = weeklySpendSeries[idx - 1];
-                  const x1 = xAt(idx - 1, weeklySpendSeries.length);
-                  const x2 = xAt(idx, weeklySpendSeries.length);
-                  const yScale = weeklyMax || 1;
-                  const y1 = 85 - (prev.total / yScale) * 50;
-                  const y2 = 85 - (day.total / yScale) * 50;
-                  return (
-                    <line
-                      key={day.key}
-                      x1={`${x1}%`}
-                      y1={`${y1}%`}
-                      x2={`${x2}%`}
-                      y2={`${y2}%`}
-                      stroke="#06a750"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  );
-                })}
-                {weeklySpendSeries.map((day, idx) => {
-                  const x = xAt(idx, weeklySpendSeries.length);
-                  const yScale = weeklyMax || 1;
-                  const y = 85 - (day.total / yScale) * 50;
-                  const isActive = idx === weeklySpendSeries.length - 1;
-                  
-                  // Hitung tampilan nominal ringkas (contoh: 1,5M; 500k)
-                  let displayAmt = '';
-                  if (day.total > 0) {
-                    if (day.total >= 1000000) {
-                      displayAmt = (day.total / 1000000).toFixed(1).replace('.0', '') + 'M';
-                    } else if (day.total >= 1000) {
-                      displayAmt = (day.total / 1000).toFixed(0) + 'k';
-                    } else {
-                      displayAmt = day.total.toString();
-                    }
-                  }
-
-                  return (
-                    <g key={`weekly-dot-${day.key}`}>
-                      {displayAmt && (
-                        <text
-                          x={`${x}%`}
-                          y={`${y - 8}%`}
-                          textAnchor="middle"
-                          fill={isActive ? "#006a2d" : "#595c5e"}
-                          fontSize={isActive ? "10" : "9"}
-                          fontWeight="bold"
-                          className="dark:fill-slate-300 select-none pointer-events-none drop-shadow-sm"
-                        >
-                          {displayAmt}
-                        </text>
-                      )}
-                      <circle
-                        cx={`${x}%`}
-                        cy={`${y}%`}
-                        r="3.5"
-                        fill={isActive ? '#059669' : '#10b981'}
-                        stroke="#ecfdf5"
-                        strokeWidth="1.5"
-                      >
-                        <title>{`${day.label}: ${formatIDR(day.total)}`}</title>
-                      </circle>
-                    </g>
-                  );
-                })}
-              </svg>
-              <div className="absolute inset-x-0 bottom-0 flex justify-between text-[8px] font-bold text-[#595c5e] dark:text-slate-400">
-                {weeklySpendSeries.map((d) => (
-                  <span key={`label-${d.key}`}>{d.label}</span>
+              <div className="mt-8 grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Masuk bulan ini', value: monthlyIncome, icon: 'south_west', color: 'text-[#7FE0B4]' },
+                  { label: 'Keluar bulan ini', value: monthlySpend, icon: 'north_east', color: 'text-[#F5A3A3]' },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3.5 sm:p-4">
+                    <p className="flex items-center gap-1.5 text-[11.5px] text-[#F2EFE8]/60">
+                      <Icon name={s.icon} className={`text-[16px] ${s.color}`} />{s.label}
+                    </p>
+                    <p className="num mt-1.5 truncate text-[15px] font-semibold sm:text-lg">{showBalance ? formatIDR(s.value) : hidden}</p>
+                  </div>
                 ))}
               </div>
-            </div>
-            <p className="text-[11px] mt-3 text-[#595c5e] dark:text-slate-400">
-              {weeklyMax > 0
-                ? 'Grafik ini menampilkan pengeluaran harian selama 7 hari kalender terakhir.'
-                : 'Belum ada data pencatatan pengeluaran.'}
-            </p>
-          </div>
 
-            <div className="mt-4 space-y-3">
-            {recentTransactions.map(tx => (
-              <Link to="/transactions" key={tx.id} className="block bg-white dark:bg-slate-900 p-4 rounded-2xl flex items-center justify-between shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-all dark:border dark:border-slate-800 group">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform ${tx.negative ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-900/30' : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30'}`}>
-                    <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{tx.icon}</span>
-                  </div>
-                  <div>
-                    <h4 className="font-['Plus_Jakarta_Sans'] font-bold text-sm dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">{tx.title}</h4>
-                    <span className="text-slate-500 dark:text-slate-400 text-[11px] font-medium block mt-0.5">{tx.category} • {new Intl.DateTimeFormat('en-GB', {day: 'numeric', month: 'short'}).format(new Date(tx.time))}</span>
-                    <div className="mt-1.5">
-                      <span
-                        className={`inline-flex text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md ${
-                          accountLabel(tx) === 'Cash'
-                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        }`}
-                      >
-                        {accountLabel(tx)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className={`font-['Plus_Jakarta_Sans'] font-extrabold text-[15px] tracking-tight ${tx.negative ? 'text-slate-800 dark:text-slate-200' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                  {tx.negative ? '-' : '+'}{formatIDR(tx.amount)}
-                </div>
-              </Link>
-            ))}
-            
-            {recentTransactions.length === 0 && (
-              <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                <span className="material-symbols-outlined text-slate-300 dark:text-slate-700 text-4xl mb-2">receipt_long</span>
-                <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">No recent transactions</p>
+              <div className="mt-5 grid grid-cols-3 gap-2 sm:flex">
+                <Link to="/add" className="btn flex-col gap-1 text-[12px] sm:flex-row sm:gap-2 sm:text-sm bg-[#D6B97B] px-3 py-2.5 text-[#14110a] hover:brightness-105 sm:px-4">
+                  <Icon name="add" className="text-[18px]" />Catat
+                </Link>
+                <Link to="/money-details" className="btn flex-col gap-1 text-[12px] sm:flex-row sm:gap-2 sm:text-sm bg-white/[0.08] px-3 py-2.5 sm:px-4 text-[#F2EFE8] hover:bg-white/15">
+                  <Icon name="account_balance_wallet" className="text-[18px]" />Akun
+                </Link>
+                <Link to="/monthly-summary" className="btn flex-col gap-1 text-[12px] sm:flex-row sm:gap-2 sm:text-sm bg-white/[0.08] px-3 py-2.5 sm:px-4 text-[#F2EFE8] hover:bg-white/15">
+                  <Icon name="calendar_month" className="text-[18px]" />Ringkasan
+                </Link>
               </div>
+            </div>
+          </section>
+
+          {/* Weekly spend */}
+          <Card className="card-pad animate-fade-up">
+            <SectionHeader
+              title="Pengeluaran 7 hari"
+              subtitle={weeklyTotal > 0 ? `Total ${formatIDR(weeklyTotal)}` : 'Belum ada pengeluaran minggu ini'}
+              action={<Link to="/analytics" className="btn-quiet py-2 text-[13px]">Analitik<Icon name="chevron_right" className="text-[18px]" /></Link>}
+            />
+            <div className="pt-4">
+              <Bars data={weekly} ariaLabel="Grafik pengeluaran harian tujuh hari terakhir" />
+            </div>
+          </Card>
+
+          {/* Recent */}
+          <Card className="card-pad animate-fade-up">
+            <SectionHeader
+              title="Transaksi terbaru"
+              action={recent.length > 0 && <Link to="/transactions" className="btn-quiet py-2 text-[13px]">Lihat semua<Icon name="chevron_right" className="text-[18px]" /></Link>}
+            />
+            {recent.length ? (
+              <div className="-mx-2 divide-y divide-line/70">
+                {recent.map((tx) => <TxRow key={tx.id} tx={tx} to="/transactions" />)}
+              </div>
+            ) : (
+              <EmptyState icon="receipt_long" title="Belum ada transaksi"
+                text="Catat pemasukan atau pengeluaran pertamamu untuk mulai melihat arus kas."
+                action={<Link to="/add" className="btn-primary"><Icon name="add" />Catat sekarang</Link>} />
             )}
-          </div>
-        </section>
-      </main>
+          </Card>
+        </div>
 
-      <BottomNavBar />
-
-      {/* Set Limit Modal */}
-      {isLimitModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold font-headline text-on-surface">Set Monthly Limit</h2>
-              <button onClick={() => setIsLimitModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-variant transition-colors text-on-surface-variant">
-                <span className="material-symbols-outlined text-lg">close</span>
+        <div className="space-y-5">
+          {/* Monthly budget */}
+          <Card className="card-pad animate-fade-up">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="eyebrow">Anggaran bulan ini</p>
+                {monthlyLimit > 0 ? (
+                  <p className="num mt-2 text-2xl font-semibold text-ink">{formatIDR(remaining)}</p>
+                ) : (
+                  <p className="mt-2 text-[15px] font-semibold text-ink">Belum diatur</p>
+                )}
+                <p className="mt-0.5 text-[13px] text-ink-3">
+                  {monthlyLimit > 0 ? `tersisa dari ${formatIDR(monthlyLimit)}` : 'Atur batas agar pengeluaran terkendali.'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setIsLimitModalOpen(true)} className="btn-ghost px-3.5 py-2 text-[13px]">
+                {monthlyLimit > 0 ? 'Ubah' : 'Atur'}
               </button>
             </div>
-            <p className="text-sm font-body text-on-surface-variant mb-6">Enter the maximum amount of money you plan to spend this month to activate the budget warning system.</p>
-            
-            <form onSubmit={handleUpdateLimit} className="space-y-4">
-              <div>
-                <label className="block text-center text-xs font-bold uppercase tracking-widest text-outline font-label mb-4">Monthly Goal (Rp)</label>
-                <AmountInput
-                  autoFocus
-                  required 
-                  value={newLimitAmt} 
-                  onChange={setNewLimitAmt}
-                  placeholder={monthlyLimit > 0 ? monthlyLimit.toString() : "5000000"} 
-                  className="w-full bg-transparent border-b-2 border-surface-container-high focus:border-primary text-center text-4xl font-extrabold text-on-surface font-headline focus:outline-none py-2 transition-colors placeholder:text-surface-container-highest" 
-                />
-              </div>
+            {monthlyLimit > 0 && (
+              <>
+                <ProgressBar value={spendPct} tone={budgetTone} className="mt-5" />
+                <div className="mt-2 flex justify-between text-[12px] text-ink-3">
+                  <span className="num">Terpakai {Math.round(spendPct)}%</span>
+                  <span className="num">{formatIDR(monthlySpend)}</span>
+                </div>
+                {spendPct >= 80 && (
+                  <div className="mt-4">
+                    <Alert tone={spendPct >= 100 ? 'neg' : 'warn'}>
+                      {spendPct >= 100 ? 'Pengeluaran sudah melewati batas bulanan.' : 'Pengeluaran mendekati batas bulanan.'}
+                    </Alert>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
 
-              <div className="flex gap-2 justify-center pb-4">
-                {[1000000, 3000000, 5000000].map(amt => (
-                  <button 
-                    key={amt} 
-                    type="button" 
-                    onClick={() => setNewLimitAmt(amt.toString())}
-                    className="px-3 py-1.5 bg-surface-container-low hover:bg-primary-container/50 text-on-surface-variant text-xs font-bold rounded-lg transition-colors border border-surface-container"
-                  >
-                    {amt/1000000}M
-                  </button>
-                ))}
-              </div>
+          {/* Today */}
+          <Card className="card-pad flex items-center gap-4 animate-fade-up">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+              <Icon name="today" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[13px] text-ink-3">Pengeluaran hari ini</p>
+              <p className="num mt-0.5 text-xl font-semibold text-ink">{formatIDR(dailySpend)}</p>
+            </div>
+          </Card>
 
-              <button type="submit" className="w-full py-4 bg-primary text-on-primary rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform active:scale-95">
-                Save Limit
-              </button>
-            </form>
-          </div>
+          {/* Priority goal */}
+          <Card as={Link} to="/goals" className="card-pad group block animate-fade-up transition hover:border-gold/40">
+            <div className="flex items-center justify-between">
+              <p className="eyebrow">Tujuan utama</p>
+              <Icon name="arrow_outward" className="text-[18px] text-ink-3 transition group-hover:text-gold" />
+            </div>
+            {priorityGoal ? (
+              <>
+                <p className="mt-3 truncate text-[16px] font-semibold text-ink">{priorityGoal.title}</p>
+                <div className="mt-1 flex items-baseline justify-between text-[13px] text-ink-3">
+                  <span className="num">{formatIDR(priorityGoal.saved_amount)}</span>
+                  <span className="num">dari {formatIDR(priorityGoal.target_amount)}</span>
+                </div>
+                <ProgressBar value={goalPct} className="mt-3" />
+                <p className="num mt-2 text-[12px] font-semibold text-gold">{Math.round(goalPct)}% tercapai</p>
+              </>
+            ) : (
+              <p className="mt-3 text-[14px] text-ink-2">Buat tujuan tabungan pertamamu →</p>
+            )}
+          </Card>
         </div>
-      )}
-    </div>
+      </div>
+
+      <Modal open={isLimitModalOpen} onClose={() => setIsLimitModalOpen(false)} title="Batas bulanan" subtitle="Kami akan mengingatkan saat mendekati batas." icon="tune">
+        <form onSubmit={handleUpdateLimit} className="space-y-6">
+          <div className="rounded-3xl bg-surface-2/60 px-4 py-6 text-center">
+            <p className="eyebrow">Batas pengeluaran (Rp)</p>
+            <AmountInput autoFocus required value={newLimitAmt} onChange={setNewLimitAmt}
+              placeholder={monthlyLimit > 0 ? new Intl.NumberFormat('id-ID').format(monthlyLimit) : '5.000.000'}
+              className="num mt-2 w-full border-0 bg-transparent p-0 text-center text-4xl font-semibold text-ink outline-none placeholder:text-ink-3/50" />
+          </div>
+          <QuickAmounts amounts={[1000000, 3000000, 5000000, 10000000]} onPick={setNewLimitAmt} />
+          <button type="submit" className="btn-primary w-full py-3.5">Simpan batas</button>
+        </form>
+      </Modal>
+    </AppShell>
   );
 }

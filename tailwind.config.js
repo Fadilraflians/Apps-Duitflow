@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const token = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 export default {
   content: [
     "./index.html",
@@ -8,73 +10,40 @@ export default {
   theme: {
     extend: {
       colors: {
-        "secondary-fixed": "#b7f1d4",
-        "surface-bright": "#121c21",
-        "surface-tint": "#63dda5",
-        "on-secondary-fixed-variant": "#163e2d",
-        "surface-container-low": "#111a1f",
-        "outline": "#97a69f",
-        "tertiary": "#55c7d1",
-        "primary": "#63dda5",
-        "surface-container-high": "#26343a",
-        "on-secondary": "#071c13",
-        "outline-variant": "#52615b",
-        "on-tertiary": "#07191d",
-        "tertiary-container": "#19434a",
-        "on-background": "#e8f1ec",
-        "secondary-fixed-dim": "#8bd8b4",
-        "primary-container": "#b7f1d4",
-        "background": "#090f12",
-        "surface-container-highest": "#33434a",
-        "on-secondary-container": "#a9edc9",
-        "surface-variant": "#26343a",
-        "on-error": "#fff0ef",
-        "secondary-dim": "#257a56",
-        "on-tertiary-fixed-variant": "#123c42",
-        "tertiary-fixed-dim": "#80d6dc",
-        "inverse-surface": "#e8f1ec",
-        "surface-container": "#1a252a",
-        "on-surface-variant": "#a1afa8",
-        "error-container": "#5a2529",
-        "secondary": "#42bd87",
-        "on-tertiary-fixed": "#0b2024",
-        "on-primary": "#071b12",
-        "surface-dim": "#080d10",
-        "error": "#ffb4ac",
-        "on-primary-fixed-variant": "#163e2d",
-        "primary-fixed": "#b7f1d4",
-        "inverse-primary": "#20734e",
-        "on-surface": "#e8f1ec",
-        "surface": "#090f12",
-        "on-error-container": "#ffd9d7",
-        "primary-dim": "#3ab27e",
-        "error-dim": "#ffb4ac",
-        "on-secondary-fixed": "#082117",
-        "primary-fixed-dim": "#8adbb5",
-        "inverse-on-surface": "#26343a",
-        "tertiary-dim": "#38b9c7",
-        "tertiary-fixed": "#b2edf0",
-        "on-tertiary-container": "#a1e7eb",
-        "on-primary-container": "#123b29",
-        "secondary-container": "#183d2d",
-        "on-primary-fixed": "#071d13",
-        "surface-container-lowest": "#0e161a"
-      },
-      borderRadius: {
-        "DEFAULT": "0.25rem",
-        "lg": "0.5rem",
-        "xl": "1.5rem",
-        "full": "9999px"
+        bg: token('bg'),
+        surface: token('surface'),
+        'surface-2': token('surface-2'),
+        line: token('line'),
+        ink: token('ink'),
+        'ink-2': token('ink-2'),
+        'ink-3': token('ink-3'),
+        gold: token('gold'),
+        pos: token('pos'),
+        neg: token('neg'),
+        warn: token('warn'),
       },
       fontFamily: {
-        "headline": ["Plus Jakarta Sans", "sans-serif"],
-        "body": ["Manrope", "sans-serif"],
-        "label": ["Manrope", "sans-serif"]
-      }
+        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Instrument Serif"', 'Georgia', 'serif'],
+      },
+      boxShadow: {
+        soft: '0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.12)',
+        lift: '0 24px 60px -24px rgb(0 0 0 / 0.45)',
+      },
+      keyframes: {
+        'fade-up': { from: { opacity: 0, transform: 'translateY(8px)' }, to: { opacity: 1, transform: 'none' } },
+        'sheet-in': { from: { opacity: 0, transform: 'translateY(24px)' }, to: { opacity: 1, transform: 'none' } },
+        'fade-in': { from: { opacity: 0 }, to: { opacity: 1 } },
+      },
+      animation: {
+        'fade-up': 'fade-up .45s cubic-bezier(.2,.7,.2,1) both',
+        'sheet-in': 'sheet-in .3s cubic-bezier(.2,.7,.2,1) both',
+        'fade-in': 'fade-in .2s ease-out both',
+      },
     },
   },
   plugins: [
-    require('@tailwindcss/forms'),
+    require('@tailwindcss/forms')({ strategy: 'class' }),
     require('@tailwindcss/container-queries')
   ],
 }

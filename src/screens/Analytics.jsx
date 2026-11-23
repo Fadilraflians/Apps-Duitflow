@@ -1,478 +1,199 @@
-import React, { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import BottomNavBar from '../components/BottomNavBar';
+import AppShell from '../components/AppShell';
+import { Donut, PairedBars } from '../components/charts';
+import { Card, EmptyState, Icon, SectionHeader, TxRow } from '../components/ui';
 import { FinanceContext } from '../context/FinanceContext';
-import { AuthContext } from '../context/AuthContext';
-import { getLastDays, localMonthKey, localDateKey } from '../utils/dates';
-
-const monthLabelForChart = (key) => {
-  const [year, month] = key.split('-').map(Number);
-  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
-};
+import { localMonthKey } from '../utils/dates';
+import { categoryMeta, formatCompactIDR, formatIDR, monthLabel, sortByNewest } from '../utils/format';
 
 export default function Analytics() {
-  const { transactions, monthlySpend, currentBalance, showBalance, setShowBalance } = useContext(FinanceContext);
-  const { user } = useContext(AuthContext);
-  const firstName = user?.full_name?.split(' ')?.[0] || user?.email?.split('@')?.[0] || 'Guest';
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [activeChart, setActiveChart] = useState('income');
-  const formatCompactIDR = (value) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      notation: 'compact',
-      maximumFractionDigits: 1
-    }).format(value || 0);
-  const formatIDR = (value) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-  const currentMonthLabel = new Intl.DateTimeFormat('id-ID', {
-    month: 'long',
-    year: 'numeric'
-  }).format(new Date());
-
-  const currentYYYYMM = localMonthKey(new Date());
-  const todayKey = localDateKey(new Date());
-  const [distributionMonth, setDistributionMonth] = useState(currentYYYYMM);
+  const { transactions } = useContext(FinanceContext);
+  const currentMonth = localMonthKey(new Date());
+  const [month, setMonth] = useState(currentMonth);
+  const [activeCat, setActiveCat] = useState(null);
+  const [selectedCat, setSelectedCat] = useState(null);
 
   const availableMonths = useMemo(() => {
-    const mSet = new Set();
-    transactions.forEach(tx => {
-      const monthKey = localMonthKey(tx.time);
-      if (monthKey) mSet.add(monthKey);
-    });
-    const arr = Array.from(mSet).sort((a,b) => b.localeCompare(a));
-    if (!arr.includes(currentYYYYMM)) arr.unshift(currentYYYYMM);
-    return arr;
-  }, [transactions, currentYYYYMM]);
+    const set = new Set(transactions.map((tx) => localMonthKey(tx.time)).filter(Boolean));
+    set.add(currentMonth);
+    return [...set].sort((a, b) => b.localeCompare(a));
+  }, [transactions, currentMonth]);
 
-  const { categories, totalSpendForMonth } = useMemo(() => {
-    const expenses = transactions.filter(tx => {
-      if (!tx.negative) return false;
-      const txMonth = localMonthKey(tx.time);
-      return txMonth === distributionMonth;
-    });
-
-    const totalSpend = expenses.reduce((acc, curr) => acc + curr.amount, 0);
-
-    const categoryTotals = expenses.reduce((acc, curr) => {
-      acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
-      return acc;
-    }, {});
-
-    const getColors = (cat) => {
-      switch(cat) {
-        case 'Food': return { hex: '#34d399', icon: 'restaurant' };
-        case 'Transport': return { hex: '#38bdf8', icon: 'directions_car' };
-        case 'Shopping': return { hex: '#a78bfa', icon: 'shopping_bag' };
-        case 'Leisure': return { hex: '#fbbf24', icon: 'movie' };
-        case 'Bills': return { hex: '#fb7185', icon: 'receipt_long' };
-        default: return { hex: '#94a3b8', icon: 'category' };
-      }
+  const { segments, totalSpend, totalIncome } = useMemo(() => {
+    const inMonth = transactions.filter((tx) => localMonthKey(tx.time) === month);
+    const expenses = inMonth.filter((tx) => tx.negative);
+    const totals = expenses.reduce((acc, tx) => { acc[tx.category] = (acc[tx.category] || 0) + tx.amount; return acc; }, {});
+    const total = expenses.reduce((s, tx) => s + tx.amount, 0);
+    return {
+      totalSpend: total,
+      totalIncome: inMonth.filter((tx) => !tx.negative).reduce((s, tx) => s + tx.amount, 0),
+      segments: Object.entries(totals)
+        .map(([name, amount]) => ({ name, amount, ...categoryMeta(name), pct: total ? (amount / total) * 100 : 0 }))
+        .sort((a, b) => b.amount - a.amount),
     };
+  }, [transactions, month]);
 
-    const catsArr = Object.keys(categoryTotals).map(cat => {
-      const percentage = totalSpend > 0 ? (categoryTotals[cat] / totalSpend) * 100 : 0;
-      return { 
-        name: cat, 
-        amount: categoryTotals[cat], 
-        percentStr: `${Math.round(percentage)}%`,
-        percentage,
-        ...getColors(cat)
-      };
-    }).sort((a, b) => b.amount - a.amount);
-
-    return { categories: catsArr, totalSpendForMonth: totalSpend };
-  }, [transactions, distributionMonth]);
-
-  const circleLength = 2 * Math.PI * 82;
-  let currentOffset = 0;
-  
-  const generateChartSegments = () => {
-    return categories.map((cat) => {
-      const segLength = (cat.percentage / 100) * circleLength;
-      const visibleLength = Math.max(0, segLength - 3);
-      const segment = (
-        <circle 
-          key={cat.name}
-          cx="110" cy="110"
-          fill="transparent"
-          r="82"
-          stroke={cat.hex}
-          strokeDasharray={`${visibleLength} ${circleLength - visibleLength}`}
-          strokeDashoffset={-currentOffset} 
-          strokeWidth="22"
-          strokeLinecap="butt">
-          <title>{`${cat.name}: ${formatIDR(cat.amount)} (${cat.percentStr})`}</title>
-        </circle>
-      );
-      currentOffset += segLength;
-      return segment;
-    });
-  };
-
-  // Build income/spend time-series for the last 7 calendar days, including today.
-  const cashflowSeries = useMemo(() => {
-    const dailyMap = new Map();
+  const trend = useMemo(() => {
+    const map = new Map();
     transactions.forEach((tx) => {
-      const key = localDateKey(tx.time);
+      const key = localMonthKey(tx.time);
       if (!key) return;
-      const prev = dailyMap.get(key) || { income: 0, spend: 0 };
-      if (tx.negative) {
-        prev.spend += Number(tx.amount || 0);
-      } else {
-        prev.income += Number(tx.amount || 0);
-      }
-      dailyMap.set(key, prev);
+      const row = map.get(key) || { income: 0, spend: 0 };
+      if (tx.negative) row.spend += tx.amount; else row.income += tx.amount;
+      map.set(key, row);
     });
-    return getLastDays(7).map(({ key, label }) => ({
-      key,
-      label,
-      income: dailyMap.get(key)?.income || 0,
-      spend: dailyMap.get(key)?.spend || 0
-    }));
-  }, [transactions, todayKey]);
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const key = localMonthKey(d);
+      return {
+        key,
+        label: d.toLocaleDateString('id-ID', { month: 'short' }),
+        fullLabel: monthLabel(key),
+        income: map.get(key)?.income || 0,
+        spend: map.get(key)?.spend || 0,
+      };
+    });
+  }, [transactions]);
 
-  const maxDaily = Math.max(
-    0,
-    ...cashflowSeries.map((d) => Math.max(d.income, d.spend))
-  );
-  const maxDailyIncome = Math.max(0, ...cashflowSeries.map(d => d.income));
-  const maxDailySpend = Math.max(0, ...cashflowSeries.map(d => d.spend));
-  const dailyRangeLabel =
-    cashflowSeries[0]?.label === cashflowSeries[cashflowSeries.length - 1]?.label
-      ? cashflowSeries[0]?.label
-      : `${cashflowSeries[0]?.label} - ${cashflowSeries[cashflowSeries.length - 1]?.label}`;
+  const catTransactions = useMemo(() => {
+    if (!selectedCat) return [];
+    return sortByNewest(transactions.filter((tx) => tx.negative && tx.category === selectedCat && localMonthKey(tx.time) === month));
+  }, [transactions, selectedCat, month]);
 
-  const categoryTransactions = useMemo(() => {
-    if (!selectedCategory) return [];
-    return [...transactions]
-      .filter((tx) => tx.negative && tx.category === selectedCategory && localMonthKey(tx.time) === distributionMonth)
-      .sort((a, b) => new Date(b.time) - new Date(a.time));
-  }, [transactions, selectedCategory, distributionMonth]);
-  const chartPad = { left: 6, right: 6 };
-  const xAt = (idx, total) => {
-    if (total <= 1) return 50;
-    return chartPad.left + (idx / (total - 1)) * (100 - chartPad.left - chartPad.right);
-  };
+  const net = totalIncome - totalSpend;
+  const savingRate = totalIncome > 0 ? Math.round((net / totalIncome) * 100) : null;
+  const top = segments[0];
+  const highlighted = segments.find((s) => s.name === activeCat);
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen pb-32">
-      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-[#10191d]/90 px-6 py-4 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-primary-container flex items-center justify-center">
-            <img alt="User profile avatar" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCISr3xVrhcxN-TIZ_oVcpBC9j0tYqm2vpjBo_jNJhvbKpqRW7tWsa1TQtoz7jhvrOD_5WvZGg4i_FN9xIdSi4TH7qIc2lOdjCREvMuHpkLQfkamPNHShxlD0_kDQgevrF5MrdH2OFXoQ8qsvlQBLl9gJSBkgLLlSS6vn67CZVahLpR6WNi41pyqNGkmBHRMoEsmHmBo-Ubqo8Pf5HxC9RjSOa9Nhs8wZtq06YNzgZLZCfAb31kePv4UBQLYwj2Z8qyzXasaRDatzQ5" />
-          </div>
-          <span className="text-2xl font-bold text-[#006a2d] dark:text-[#6bff8f] tracking-tight">{firstName}</span>
-        </div>
-        <button className="material-symbols-outlined text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full p-2 transition-transform active:scale-95">
-          notifications
-        </button>
-      </header>
+    <AppShell
+      title="Analitik"
+      subtitle="Pahami ke mana uangmu pergi."
+      wide
+      actions={
+        <label className="relative hidden sm:block">
+          <Icon name="calendar_month" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-ink-3" />
+          <select value={month} onChange={(e) => { setMonth(e.target.value); setSelectedCat(null); }} aria-label="Pilih bulan"
+            className="field !w-auto cursor-pointer appearance-none !py-2 pl-9 pr-8 !text-[13px]">
+            {availableMonths.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+          </select>
+        </label>
+      }
+    >
+      {/* Mobile month picker */}
+      <label className="relative mb-5 block sm:hidden">
+        <Icon name="calendar_month" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[18px] text-ink-3" />
+        <select value={month} onChange={(e) => { setMonth(e.target.value); setSelectedCat(null); }} aria-label="Pilih bulan"
+          className="field cursor-pointer appearance-none pl-11">
+          {availableMonths.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
+        </select>
+      </label>
 
-      <main className="px-6 max-w-4xl mx-auto space-y-8 mt-4">
-        <section className="space-y-1">
-          <span className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Your spending narrative</span>
-          <h1 className="text-4xl font-extrabold text-on-surface tracking-tight">Monthly Analytics</h1>
-        </section>
+      {/* KPI row */}
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4 animate-fade-up">
+        {[
+          { label: 'Pemasukan', value: formatIDR(totalIncome), icon: 'south_west', color: 'text-pos' },
+          { label: 'Pengeluaran', value: formatIDR(totalSpend), icon: 'north_east', color: 'text-neg' },
+          { label: 'Selisih', value: `${net < 0 ? '−' : ''}${formatIDR(Math.abs(net))}`, icon: 'balance', color: 'text-gold' },
+          { label: 'Rasio tabungan', value: savingRate === null ? '—' : `${savingRate}%`, icon: 'savings', color: 'text-gold' },
+        ].map((k) => (
+          <Card key={k.label} className="p-4 sm:p-5">
+            <p className="flex items-center gap-1.5 text-[12px] text-ink-3"><Icon name={k.icon} className={`text-[16px] ${k.color}`} />{k.label}</p>
+            <p className="num mt-1.5 truncate text-lg font-semibold text-ink sm:text-xl">{k.value}</p>
+          </Card>
+        ))}
+      </div>
 
-        <section className="group relative overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] transition-all duration-300 hover:scale-[1.01] md:p-8">
-          {/* Abstract glows */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/15 transition-all duration-500 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
-          <div className="absolute top-1/2 left-1/2 w-full h-full bg-emerald-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-          
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-[10px] uppercase tracking-[0.2em] font-bold text-emerald-100/90 dark:text-slate-400">Jumlah Uang Saya</p>
-                <button onClick={() => setShowBalance(!showBalance)} className="text-emerald-100/70 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full w-5 h-5 flex items-center justify-center backdrop-blur shadow-sm">
-                  <span className="material-symbols-outlined text-[12px]">{showBalance ? 'visibility' : 'visibility_off'}</span>
-                </button>
-              </div>
-              <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tighter drop-shadow-md">
-                {showBalance ? formatIDR(Math.abs(currentBalance)) : 'Rp •••••••'}
-              </h2>
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full ${currentBalance < 0 ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-100'} ring-1 ring-inset ${currentBalance < 0 ? 'ring-rose-500/30' : 'ring-emerald-500/30'}`}>
-                  <span className="material-symbols-outlined text-[10px]">{currentBalance < 0 ? 'arrow_downward' : 'arrow_upward'}</span>
-                </span>
-                <p className="text-[11px] font-medium text-emerald-50 dark:text-slate-300 opacity-90">
-                  {currentBalance < 0 ? 'Saldo saat ini minus' : 'Saldo saat ini positif'}
-                </p>
-              </div>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner transform group-hover:rotate-6 transition-transform duration-300">
-              <span className="material-symbols-outlined text-3xl text-white opacity-90 drop-shadow-sm">account_balance_wallet</span>
-            </div>
-          </div>
-          
-          <div className="relative z-10 mt-6 pt-5 border-t border-white/15 flex items-center justify-between">
-            <p className="text-xs text-white/80 font-medium tracking-wide">Pantau perputaran uangmu.</p>
-            <Link
-              to="/money-details"
-              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-300 px-5 py-2.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-950 shadow-lg shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95"
-            >
-              Lihat Detail
-              <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </Link>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-7 bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-200/60 dark:border-slate-800 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 dark:bg-emerald-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 pointer-events-none"></div>
-            
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-10 relative z-10">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-extrabold font-headline mb-2 text-slate-800 dark:text-slate-100">Sebaran Pengeluaran</h2>
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-emerald-600 dark:text-emerald-400">calendar_month</span>
-                  <select 
-                    value={distributionMonth} 
-                    onChange={(e) => setDistributionMonth(e.target.value)}
-                    className="bg-slate-100/70 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-emerald-800 dark:text-emerald-300 font-bold text-xs rounded-lg px-2 py-1 outline-none transition-colors appearance-none cursor-pointer border border-emerald-100 dark:border-emerald-900/50"
-                  >
-                    {availableMonths.map(m => {
-                      const [year, month] = m.split('-');
-                      const theDate = new Date(year, parseInt(month) - 1);
-                      return <option key={m} value={m}>{new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(theDate)}</option>;
-                    })}
-                  </select>
-                </div>
-              </div>
-              <span className="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-sm border border-emerald-200/50 dark:border-emerald-800/50 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Tracker</span>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-7 sm:gap-8 relative z-10">
-              <div className="relative h-56 w-56 shrink-0">
-                <svg viewBox="0 0 220 220" role="img" aria-label={`Sebaran pengeluaran ${monthLabelForChart(distributionMonth)}`} className="h-full w-full -rotate-90 overflow-visible drop-shadow-sm">
-                  <circle className="text-slate-100 dark:text-slate-800" cx="110" cy="110" fill="none" r="82" stroke="currentColor" strokeWidth="22"></circle>
-                  {generateChartSegments()}
-                </svg>
-                <div className="absolute inset-[2.8rem] flex flex-col items-center justify-center rounded-full border border-slate-100 bg-white/95 px-2 text-center shadow-inner dark:border-slate-800 dark:bg-slate-900/95">
-                  <span className="mb-1 text-[9px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">Total keluar</span>
-                  <span className="text-xl font-extrabold leading-tight tracking-tight text-slate-800 dark:text-slate-100">
-                    {formatCompactIDR(totalSpendForMonth)}
-                  </span>
-                  <span className="mt-1 text-[9px] font-semibold text-slate-400 dark:text-slate-500">{categories.length} kategori</span>
-                </div>
-              </div>
-
-              <div className="w-full flex-1 space-y-1 rounded-2xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/30 sm:p-4">
-                {categories.map(item => (
-                  <div key={item.name} className="flex items-center justify-between gap-2 rounded-xl px-2 py-2.5 transition-colors hover:bg-white dark:hover:bg-slate-900/70">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" style={{backgroundColor: `${item.hex}20`, color: item.hex}}>
-                        <span className="material-symbols-outlined text-[18px]">{item.icon}</span>
-                      </div>
-                      <div className="min-w-0"><span className="block truncate text-xs font-bold text-slate-700 dark:text-slate-300">{item.name}</span><span className="mt-0.5 block text-[10px] font-semibold text-slate-500 dark:text-slate-400">{item.percentStr} dari total</span></div>
-                    </div>
-                    <span className="shrink-0 text-right text-xs font-extrabold tracking-tight text-slate-800 dark:text-slate-200">{formatCompactIDR(item.amount)}</span>
-                  </div>
+      <div className="grid gap-5 lg:grid-cols-5">
+        {/* Distribution */}
+        <Card className="card-pad lg:col-span-3 animate-fade-up">
+          <SectionHeader title="Sebaran pengeluaran" subtitle={monthLabel(month)} />
+          {segments.length ? (
+            <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+              <Donut
+                segments={segments}
+                total={totalSpend}
+                active={activeCat}
+                onActive={setActiveCat}
+                center={
+                  <>
+                    <span className="text-[11px] text-ink-3">{highlighted ? highlighted.label : 'Total keluar'}</span>
+                    <span className="num mt-0.5 text-xl font-semibold text-ink">{formatCompactIDR(highlighted ? highlighted.amount : totalSpend)}</span>
+                    <span className="num mt-0.5 text-[11px] text-ink-3">{highlighted ? `${Math.round(highlighted.pct)}%` : `${segments.length} kategori`}</span>
+                  </>
+                }
+              />
+              <ul className="w-full flex-1 space-y-1">
+                {segments.map((s) => (
+                  <li key={s.name}>
+                    <button type="button"
+                      onMouseEnter={() => setActiveCat(s.name)} onMouseLeave={() => setActiveCat(null)}
+                      onClick={() => setSelectedCat(selectedCat === s.name ? null : s.name)}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition ${selectedCat === s.name ? 'bg-surface-2' : 'hover:bg-surface-2/60'}`}>
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: s.color }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] font-medium text-ink">{s.label}</span>
+                        <span className="mt-1 block h-1 overflow-hidden rounded-full bg-ink/10">
+                          <span className="block h-full rounded-full" style={{ width: `${s.pct}%`, background: s.color }} />
+                        </span>
+                      </span>
+                      <span className="text-right">
+                        <span className="num block text-[13px] font-semibold text-ink">{formatCompactIDR(s.amount)}</span>
+                        <span className="num block text-[11px] text-ink-3">{Math.round(s.pct)}%</span>
+                      </span>
+                    </button>
+                  </li>
                 ))}
-                {categories.length === 0 && (
-                   <p className="py-8 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">Belum ada pengeluaran pada bulan ini.</p>
-                )}
-              </div>
+              </ul>
             </div>
-          </div>
+          ) : (
+            <EmptyState icon="donut_large" title="Belum ada pengeluaran" text={`Tidak ada pengeluaran tercatat pada ${monthLabel(month)}.`} />
+          )}
 
-          <div className="md:col-span-5 bg-surface-container-low rounded-xl p-8 flex flex-col">
-            <div className="flex bg-surface-container-highest p-1 rounded-lg mb-6">
-              <button 
-                onClick={() => setActiveChart('income')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeChart === 'income' ? 'bg-surface text-emerald-600 shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-              >
-                Uang Masuk
-              </button>
-              <button 
-                onClick={() => setActiveChart('spend')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${activeChart === 'spend' ? 'bg-surface text-rose-600 shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
-              >
-                Uang Keluar
-              </button>
+          {selectedCat && (
+            <div className="mt-5 rounded-2xl border border-line p-3 animate-fade-up">
+              <div className="flex items-center justify-between px-2 py-1">
+                <p className="text-[13px] font-semibold text-ink">{categoryMeta(selectedCat).label} · {catTransactions.length} transaksi</p>
+                <button type="button" onClick={() => setSelectedCat(null)} className="icon-btn h-8 w-8" aria-label="Tutup"><Icon name="close" className="text-[18px]" /></button>
+              </div>
+              <div className="max-h-72 divide-y divide-line/70 overflow-y-auto">
+                {catTransactions.slice(0, 30).map((tx) => <TxRow key={tx.id} tx={tx} />)}
+              </div>
             </div>
-            
-            {activeChart === 'income' ? (
-              <div className="animate-in fade-in zoom-in-95 duration-300">
-                <div className="mb-4">
-                  <h2 className="text-lg font-bold">Grafik Uang Masuk</h2>
-                  <p className="text-sm text-on-surface-variant">7 hari terakhir ({dailyRangeLabel})</p>
-                </div>
-                <div className="relative h-40 mt-4">
-                  <svg className="absolute inset-0 w-full h-full">
-                    <line x1="0" y1="85%" x2="100%" y2="85%" stroke="rgba(148,163,184,0.3)" strokeWidth="1" />
-                    {cashflowSeries.map((day, idx) => {
-                      if (idx === 0) return null;
-                      const prev = cashflowSeries[idx - 1];
-                      const x1 = xAt(idx - 1, cashflowSeries.length);
-                      const x2 = xAt(idx, cashflowSeries.length);
-                      const yScale = maxDailyIncome || 1;
-                      const y1 = 85 - (prev.income / yScale) * 70;
-                      const y2 = 85 - (day.income / yScale) * 70;
-                      return (
-                        <line key={`incoline-${idx}`} x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} stroke="#10b981" strokeWidth="2.25" strokeLinecap="round" />
-                      );
-                    })}
-                    {cashflowSeries.map((day, idx) => {
-                      const x = xAt(idx, cashflowSeries.length);
-                      const yScale = maxDailyIncome || 1;
-                      const yIncome = 85 - (day.income / yScale) * 70;
-                      const displayIncome = day.income >= 1000000 ? (day.income / 1000000).toFixed(1).replace('.0', '') + 'M' : (day.income >= 1000 ? (day.income / 1000).toFixed(0) + 'k' : (day.income > 0 ? day.income.toString() : ''));
-                      return (
-                        <g key={`incodot-${idx}`}>
-                          {displayIncome && <text x={`${x}%`} y={`${yIncome - 8}%`} textAnchor="middle" fill="#10b981" fontSize="9" fontWeight="bold" className="dark:fill-emerald-400 select-none pointer-events-none drop-shadow-sm">{displayIncome}</text>}
-                          <circle cx={`${x}%`} cy={`${yIncome}%`} r="3.25" fill="#10b981" stroke="#ecfdf5" strokeWidth="1.5"><title>{`${day.label} Income: ${formatIDR(day.income)}`}</title></circle>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                  <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-on-surface-variant">
-                    {cashflowSeries.map((d) => <span key={`inl-${d.key}`}>{d.label}</span>)}
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <Link to="/cashflow-details/income" className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Detail Income</Link>
-                </div>
-              </div>
-            ) : (
-              <div className="animate-in fade-in zoom-in-95 duration-300">
-                <div className="mb-4">
-                  <h2 className="text-lg font-bold">Grafik Uang Keluar</h2>
-                  <p className="text-sm text-on-surface-variant">7 hari terakhir ({dailyRangeLabel})</p>
-                </div>
-                <div className="relative h-40 mt-4">
-                  <svg className="absolute inset-0 w-full h-full">
-                    <line x1="0" y1="85%" x2="100%" y2="85%" stroke="rgba(148,163,184,0.3)" strokeWidth="1" />
-                    {cashflowSeries.map((day, idx) => {
-                      if (idx === 0) return null;
-                      const prev = cashflowSeries[idx - 1];
-                      const x1 = xAt(idx - 1, cashflowSeries.length);
-                      const x2 = xAt(idx, cashflowSeries.length);
-                      const yScale = maxDailySpend || 1;
-                      const y1 = 85 - (prev.spend / yScale) * 70;
-                      const y2 = 85 - (day.spend / yScale) * 70;
-                      return (
-                        <line key={`spline-${idx}`} x1={`${x1}%`} y1={`${y1}%`} x2={`${x2}%`} y2={`${y2}%`} stroke="#f43f5e" strokeWidth="2.25" strokeLinecap="round" />
-                      );
-                    })}
-                    {cashflowSeries.map((day, idx) => {
-                      const x = xAt(idx, cashflowSeries.length);
-                      const yScale = maxDailySpend || 1;
-                      const ySpend = 85 - (day.spend / yScale) * 70;
-                      const displaySpend = day.spend >= 1000000 ? (day.spend / 1000000).toFixed(1).replace('.0', '') + 'M' : (day.spend >= 1000 ? (day.spend / 1000).toFixed(0) + 'k' : (day.spend > 0 ? day.spend.toString() : ''));
-                      return (
-                        <g key={`spdot-${idx}`}>
-                          {displaySpend && <text x={`${x}%`} y={`${ySpend - 8}%`} textAnchor="middle" fill="#f43f5e" fontSize="9" fontWeight="bold" className="dark:fill-rose-400 select-none pointer-events-none drop-shadow-sm">{displaySpend}</text>}
-                          <circle cx={`${x}%`} cy={`${ySpend}%`} r="3.25" fill="#f43f5e" stroke="#fff1f2" strokeWidth="1.5"><title>{`${day.label} Spend: ${formatIDR(day.spend)}`}</title></circle>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                  <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] font-bold uppercase text-on-surface-variant">
-                    {cashflowSeries.map((d) => <span key={`spl-${d.key}`}>{d.label}</span>)}
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end">
-                  <Link to="/cashflow-details/spend" className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">Detail Spend</Link>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
+        </Card>
 
-          <div className="md:col-span-12 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold tracking-tight">Top Categories</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories.map(cat => (
-                <button
-                  type="button"
-                  key={cat.name}
-                  onClick={() => setSelectedCategory(cat.name)}
-                  className={`bg-surface-container-lowest p-5 rounded-xl flex items-center gap-4 transition-all hover:translate-y-[-2px] hover:shadow-lg text-left ${
-                    selectedCategory === cat.name ? 'ring-2 ring-primary/40' : ''
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-md flex items-center justify-center`} style={{backgroundColor: cat.hex + '20', color: cat.hex}}>
-                    <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{cat.icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-on-surface">{cat.name}</span>
-                      <span className="text-xs font-bold text-on-surface-variant">{cat.percentStr}</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-surface-container rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: cat.percentStr, backgroundColor: cat.hex }}></div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            {selectedCategory && (
-              <div className="bg-surface-container-lowest dark:bg-slate-900 rounded-xl p-4 border border-slate-200/60 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold">Transaksi kategori: {selectedCategory}</h3>
-                  <button
-                    type="button"
-                    className="text-xs font-bold text-slate-500 hover:opacity-80"
-                    onClick={() => setSelectedCategory(null)}
-                  >
-                    Tutup
-                  </button>
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {categoryTransactions.slice(0, 20).map((tx) => (
-                    <div key={`cat-${tx.id}`} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-                      <div>
-                        <p className="text-sm font-semibold">{tx.title}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(new Date(tx.time))}
-                        </p>
-                      </div>
-                      <p className="text-sm font-bold text-rose-600">-{formatIDR(tx.amount)}</p>
-                    </div>
-                  ))}
-                  {categoryTransactions.length === 0 && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-4">
-                      Belum ada transaksi pada kategori ini.
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="space-y-5 lg:col-span-2">
+          {/* Trend */}
+          <Card className="card-pad animate-fade-up">
+            <SectionHeader title="Tren 6 bulan" subtitle="Pemasukan vs pengeluaran" />
+            <PairedBars data={trend} ariaLabel="Perbandingan pemasukan dan pengeluaran enam bulan terakhir" />
+          </Card>
 
-          <div className="md:col-span-12 bg-primary text-on-primary p-8 rounded-xl flex flex-col md:flex-row items-center gap-8 overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-container/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-            <div className="flex-1 space-y-4 relative z-10">
-              <h3 className="text-3xl font-extrabold leading-tight">
-                Lihat pola pengeluaranmu bulan ini.
-              </h3>
-              <p className="text-on-primary/80 font-body max-w-md">
-                Gunakan detail kategori di atas untuk melihat pos mana yang paling besar menyedot uangmu.
-                Kurangi sedikit saja dari kategori terbesar, efeknya ke tabungan bakal terasa.
+          {/* Insight */}
+          <section className="lux-card p-6 animate-fade-up">
+            <div className="relative z-10">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#D6B97B]/15 text-[#D6B97B]">
+                <Icon name="tips_and_updates" />
+              </span>
+              <p className="mt-4 font-display text-[26px] leading-tight">
+                {top ? <>Pos terbesarmu: <em className="text-[#D6B97B]">{top.label}</em></> : 'Mulai catat untuk melihat insight.'}
               </p>
-              <Link
-                to="/cashflow-details/spend"
-                className="inline-block bg-primary-container text-on-primary-container font-bold px-6 py-3 rounded-full hover:opacity-90 transition-all"
-              >
-                Fokuskan Spend
-              </Link>
+              <p className="mt-2 text-[13px] leading-relaxed text-[#F2EFE8]/65">
+                {top
+                  ? `${Math.round(top.pct)}% dari pengeluaran ${monthLabel(month, { month: 'long' })} (${formatIDR(top.amount)}). Memangkas 10% saja dari pos ini menghemat ${formatIDR(top.amount * 0.1)}.`
+                  : 'Setelah ada transaksi, kami tunjukkan kategori yang paling banyak menyerap uangmu.'}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link to={`/monthly-summary`} className="btn bg-[#D6B97B] px-4 py-2.5 text-[13px] text-[#14110a]">Ringkasan bulanan</Link>
+                <Link to={`/cashflow-details/spend?month=${month}`} className="btn bg-white/[0.08] px-4 py-2.5 text-[13px] text-[#F2EFE8] hover:bg-white/15">Semua pengeluaran</Link>
+              </div>
             </div>
-            <div className="w-full md:w-1/3 aspect-[4/3] rounded-xl overflow-hidden bg-surface-container relative z-10">
-              <img alt="Growth chart" className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZx3zevViDNoXBdqawV5r3BCSb2puxmk3ZLI4EKkUeMq0YxsnTrzhlO0UvK0aqqrqn6Azci5RSj0wk0LUyDD75CrHlq-4rP98W1B2xN4euIZ1QU290ruYUnekanMEHZjEYqvPnee3XDSh9iabLDL7pCvjgsouS5E33wE8UpHa0QOZ9mVhfAcacU7hCBgD3-JILWD1Q1GvbgU95EpOhqIEZ4KrLS07VkBUpQNBO8XSF0kDqEXvzPtTRE58xK3FdLNE5dPcwEFIxuUMj" />
-            </div>
-          </div>
+          </section>
         </div>
-      </main>
-
-      <BottomNavBar />
-    </div>
+      </div>
+    </AppShell>
   );
 }

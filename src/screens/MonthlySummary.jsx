@@ -1,17 +1,10 @@
 import { useContext, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AppShell from '../components/AppShell';
+import { Card, EmptyState, Icon, SectionHeader, TxRow } from '../components/ui';
 import { FinanceContext } from '../context/FinanceContext';
-import BottomNavBar from '../components/BottomNavBar';
 import { localMonthKey } from '../utils/dates';
-
-const formatIDR = (value) => new Intl.NumberFormat('id-ID', {
-  style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
-}).format(value || 0);
-
-const monthLabel = (key) => {
-  const [year, month] = key.split('-').map(Number);
-  return new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
-};
+import { categoryMeta, formatIDR, monthLabel } from '../utils/format';
 
 export default function MonthlySummary() {
   const { transactions } = useContext(FinanceContext);
@@ -19,12 +12,15 @@ export default function MonthlySummary() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const months = useMemo(() => {
-    const monthKeys = new Set(transactions.map((tx) => localMonthKey(tx.time)).filter(Boolean));
-    for (let offset = 0; offset < 12; offset += 1) {
-      monthKeys.add(localMonthKey(new Date(new Date().getFullYear(), new Date().getMonth() - offset, 1)));
-    }
-    return [...monthKeys].sort((a, b) => b.localeCompare(a));
+    const keys = new Set(transactions.map((tx) => localMonthKey(tx.time)).filter(Boolean));
+    const now = new Date();
+    for (let offset = 0; offset < 12; offset += 1) keys.add(localMonthKey(new Date(now.getFullYear(), now.getMonth() - offset, 1)));
+    return [...keys].sort((a, b) => b.localeCompare(a));
   }, [transactions]);
+
+  const idx = months.indexOf(selectedMonth);
+  const prevMonth = months[idx + 1];
+  const nextMonth = idx > 0 ? months[idx - 1] : null;
 
   const monthTransactions = useMemo(() => transactions
     .filter((tx) => localMonthKey(tx.time) === selectedMonth)
@@ -48,79 +44,90 @@ export default function MonthlySummary() {
   const categoryTotals = [...summary.categories.entries()].sort((a, b) => b[1] - a[1]);
 
   return (
-    <div className="min-h-screen bg-[#090f12] pb-32 text-slate-100">
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-white/10 bg-[#10191d]/90 px-5 py-4 backdrop-blur-xl sm:px-8">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Laporan keuangan</p>
-          <h1 className="mt-1 text-xl font-extrabold tracking-tight text-slate-800 dark:text-white">Ringkasan Bulanan</h1>
-        </div>
-        <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-          <span className="material-symbols-outlined text-lg text-emerald-700 dark:text-emerald-300">calendar_month</span>
-          <select aria-label="Pilih bulan laporan" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} className="max-w-36 bg-transparent text-xs font-bold text-slate-700 outline-none dark:text-slate-100 sm:max-w-none sm:text-sm">
-            {months.map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}
+    <AppShell title="Ringkasan bulanan" subtitle="Laporan arus kas per bulan." back>
+      <div className="space-y-5">
+        {/* Month stepper */}
+        <div className="flex items-center gap-2 animate-fade-up">
+          <button type="button" disabled={!prevMonth} onClick={() => setSelectedMonth(prevMonth)} className="icon-btn border border-line disabled:opacity-30" aria-label="Bulan sebelumnya">
+            <Icon name="chevron_left" />
+          </button>
+          <select aria-label="Pilih bulan laporan" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}
+            className="field flex-1 cursor-pointer appearance-none text-center font-semibold">
+            {months.map((m) => <option key={m} value={m}>{monthLabel(m)}</option>)}
           </select>
-        </label>
-      </header>
+          <button type="button" disabled={!nextMonth} onClick={() => setSelectedMonth(nextMonth)} className="icon-btn border border-line disabled:opacity-30" aria-label="Bulan berikutnya">
+            <Icon name="chevron_right" />
+          </button>
+        </div>
 
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-9">
-        <section className="overflow-hidden rounded-[2rem] border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.24)] sm:p-9">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-100/75">Arus kas · {monthLabel(selectedMonth)}</p>
-          <p className="mt-3 text-sm font-medium text-emerald-50/80">Selisih pemasukan dan pengeluaran</p>
-          <p className="mt-1 text-3xl font-extrabold tracking-tight sm:text-4xl">{formatIDR(net)}</p>
-          <p className="mt-2 text-xs text-emerald-50/75">{monthTransactions.length} transaksi tercatat pada bulan ini</p>
-        </section>
-
-        <section className="grid gap-4 sm:grid-cols-2">
-          <article className="rounded-3xl border border-emerald-200/20 bg-white p-5 shadow-sm dark:border-emerald-900/50 dark:bg-slate-900 sm:p-6">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"><span className="material-symbols-outlined">south_west</span></span>
-              <div><p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Total pemasukan</p><p className="mt-1 text-xl font-extrabold text-emerald-700 dark:text-emerald-300 sm:text-2xl">{formatIDR(summary.income)}</p></div>
-            </div>
-          </article>
-          <article className="rounded-3xl border border-rose-200/20 bg-white p-5 shadow-sm dark:border-rose-900/50 dark:bg-slate-900 sm:p-6">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"><span className="material-symbols-outlined">north_east</span></span>
-              <div><p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Total pengeluaran</p><p className="mt-1 text-xl font-extrabold text-rose-700 dark:text-rose-300 sm:text-2xl">{formatIDR(summary.expense)}</p></div>
-            </div>
-          </article>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div><h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Rincian pengeluaran</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Dikelompokkan berdasarkan kategori</p></div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{categoryTotals.length} kategori</span>
-          </div>
-          {categoryTotals.length ? <div className="space-y-4">
-            {categoryTotals.map(([category, amount]) => {
-              const percent = summary.expense > 0 ? (amount / summary.expense) * 100 : 0;
-              return <div key={category}>
-                <div className="mb-2 flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-slate-700 dark:text-slate-200">{category}</span><span className="font-bold text-slate-800 dark:text-slate-100">{formatIDR(amount)}</span></div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"><div className="h-full rounded-full bg-emerald-600 dark:bg-emerald-400" style={{ width: `${percent}%` }} /></div>
-              </div>;
-            })}
-          </div> : <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Belum ada pengeluaran untuk {monthLabel(selectedMonth)}.</p>}
-        </section>
-
-        {[
-          { title: 'Uang masuk', type: 'income', items: incomeTransactions },
-          { title: 'Uang keluar', type: 'spend', items: expenseTransactions }
-        ].map(({ title, type, items }) => <section key={type} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div><h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{title} bulan ini</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{items.length} transaksi · {monthLabel(selectedMonth)}</p></div>
-            <Link to={`/cashflow-details/${type}?month=${selectedMonth}`} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider ${type === 'income' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'}`}>Lihat semua</Link>
-          </div>
-          {items.length ? <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {items.slice(0, 5).map((tx) => <article key={tx.id} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tx.negative ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'}`}><span className="material-symbols-outlined">{tx.icon || (tx.negative ? 'north_east' : 'south_west')}</span></span>
-                <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{tx.title}</p><p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{tx.category} · {tx.account_name || 'Akun'} · {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(tx.time))}</p></div>
+        <section className="lux-card p-6 animate-fade-up sm:p-8">
+          <div className="relative z-10">
+            <p className="text-[12px] font-medium uppercase tracking-[0.18em] text-[#F2EFE8]/60">Selisih · {monthLabel(selectedMonth)}</p>
+            <p className={`num mt-3 text-4xl font-semibold sm:text-5xl ${net < 0 ? 'text-[#F5A3A3]' : ''}`}>{net < 0 ? '−' : '+'}{formatIDR(Math.abs(net))}</p>
+            <p className="mt-2 text-[13px] text-[#F2EFE8]/55">{monthTransactions.length} transaksi tercatat</p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+                <p className="flex items-center gap-1.5 text-[12px] text-[#F2EFE8]/60"><Icon name="south_west" className="text-[16px] text-[#7FE0B4]" />Pemasukan</p>
+                <p className="num mt-1 truncate text-lg font-semibold">{formatIDR(summary.income)}</p>
               </div>
-              <p className={`shrink-0 text-sm font-extrabold ${tx.negative ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{tx.negative ? '−' : '+'}{formatIDR(tx.amount)}</p>
-            </article>)}
-          </div> : <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Belum ada transaksi {title.toLowerCase()} untuk {monthLabel(selectedMonth)}.</p>}
-        </section>)}
-      </main>
-      <BottomNavBar />
-    </div>
+              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+                <p className="flex items-center gap-1.5 text-[12px] text-[#F2EFE8]/60"><Icon name="north_east" className="text-[16px] text-[#F5A3A3]" />Pengeluaran</p>
+                <p className="num mt-1 truncate text-lg font-semibold">{formatIDR(summary.expense)}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <Card className="card-pad animate-fade-up">
+          <SectionHeader title="Rincian pengeluaran" subtitle={`${categoryTotals.length} kategori`} />
+          {categoryTotals.length ? (
+            <div className="space-y-4">
+              {categoryTotals.map(([category, amount]) => {
+                const meta = categoryMeta(category);
+                const percent = summary.expense > 0 ? (amount / summary.expense) * 100 : 0;
+                return (
+                  <div key={category}>
+                    <div className="mb-2 flex items-center justify-between gap-3 text-[14px]">
+                      <span className="flex items-center gap-2 font-medium text-ink">
+                        <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: meta.color }} />{meta.label}
+                        <span className="num text-[12px] font-normal text-ink-3">{Math.round(percent)}%</span>
+                      </span>
+                      <span className="num font-semibold text-ink">{formatIDR(amount)}</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-ink/10">
+                      <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${percent}%`, background: meta.color }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <EmptyState icon="donut_large" title="Belum ada pengeluaran" text={`Tidak ada pengeluaran pada ${monthLabel(selectedMonth)}.`} />}
+        </Card>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          {[
+            { title: 'Uang masuk', type: 'income', items: incomeTransactions },
+            { title: 'Uang keluar', type: 'spend', items: expenseTransactions },
+          ].map(({ title, type, items }) => (
+            <Card key={type} className="card-pad animate-fade-up">
+              <SectionHeader
+                title={title}
+                subtitle={`${items.length} transaksi`}
+                action={items.length > 0 && (
+                  <Link to={`/cashflow-details/${type}?month=${selectedMonth}`} className="btn-quiet py-2 text-[13px]">
+                    Semua<Icon name="chevron_right" className="text-[18px]" />
+                  </Link>
+                )}
+              />
+              {items.length ? (
+                <div className="-mx-2 divide-y divide-line/70">
+                  {items.slice(0, 5).map((tx) => <TxRow key={tx.id} tx={tx} />)}
+                </div>
+              ) : <EmptyState icon={type === 'income' ? 'south_west' : 'north_east'} title={`Belum ada ${title.toLowerCase()}`} />}
+            </Card>
+          ))}
+        </div>
+      </div>
+    </AppShell>
   );
 }

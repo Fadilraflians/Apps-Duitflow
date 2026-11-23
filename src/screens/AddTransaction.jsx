@@ -1,26 +1,23 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FinanceContext } from '../context/FinanceContext';
+import AppShell from '../components/AppShell';
+import { Alert, Card, EmptyState, Icon } from '../components/ui';
 import AmountInput, { parseAmount } from '../components/AmountInput';
+import { FinanceContext } from '../context/FinanceContext';
+import { accountMeta, CATEGORIES, formatIDR } from '../utils/format';
 
-const categories = [
-  { name: 'Food', icon: 'restaurant' },
-  { name: 'Shopping', icon: 'shopping_bag' },
-  { name: 'Transport', icon: 'directions_car' },
-  { name: 'Bills', icon: 'receipt_long' },
-  { name: 'Leisure', icon: 'movie' },
-  { name: 'Income', icon: 'payments' }
-];
+const EXPENSE_CATEGORIES = ['Food', 'Shopping', 'Transport', 'Bills', 'Leisure'];
+const INCOME = { name: 'Income', icon: CATEGORIES.Income.icon };
 
-const formatIDR = (value) => new Intl.NumberFormat('id-ID').format(value || 0);
 const newRequestId = () => globalThis.crypto?.randomUUID?.()
   || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export default function AddTransaction() {
   const navigate = useNavigate();
   const { addTransaction, accounts } = useContext(FinanceContext);
+  const [kind, setKind] = useState('spend');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(categories[0]);
+  const [expenseCategory, setExpenseCategory] = useState('Food');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [date, setDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [note, setNote] = useState('');
@@ -34,7 +31,8 @@ export default function AddTransaction() {
   }, [accounts, selectedAccountId]);
 
   const selectedAccount = accounts.find((account) => String(account.id) === selectedAccountId);
-  const isIncome = category.name === 'Income';
+  const isIncome = kind === 'income';
+  const category = isIncome ? INCOME : { name: expenseCategory, icon: CATEGORIES[expenseCategory].icon };
 
   const handleSave = async (event) => {
     event.preventDefault();
@@ -45,7 +43,7 @@ export default function AddTransaction() {
       return;
     }
     if (!selectedAccount) {
-      setError('Pilih akun tujuan transaksi.');
+      setError('Pilih akun untuk transaksi ini.');
       return;
     }
 
@@ -53,7 +51,7 @@ export default function AddTransaction() {
     setIsSaving(true);
     setError('');
     const result = await addTransaction({
-      title: note.trim() || category.name,
+      title: note.trim() || CATEGORIES[category.name].label,
       time: new Date(`${date}T12:00:00`).toISOString(),
       amount: parsedAmount,
       icon: category.icon,
@@ -76,103 +74,131 @@ export default function AddTransaction() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090f12] px-4 pb-10 pt-5 text-slate-100 sm:px-6 sm:pt-8">
-      <main className="mx-auto max-w-2xl">
-        <header className="mb-6 flex items-center justify-between">
-          <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-emerald-700 dark:hover:bg-slate-900">
-            <span className="material-symbols-outlined">arrow_back</span> Kembali
-          </button>
-          <Link to="/money-details" className="text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-400">Kelola akun</Link>
-        </header>
-
-        <form onSubmit={handleSave} className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
-          <div className={`border-b border-white/10 px-6 pb-8 pt-7 text-white sm:px-9 ${isIncome ? 'bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552]' : 'bg-gradient-to-br from-[#10171b] via-[#142027] to-[#172c28]'}`}>
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">Transaksi baru</p>
-            <div className="mt-6 flex items-end gap-3">
-              <span className="pb-2 text-lg font-semibold text-white/70">Rp</span>
+    <AppShell title="Catat transaksi" subtitle="Cukup isi jumlah, pilih kategori dan akun, lalu simpan." back>
+      <form onSubmit={handleSave} className="mx-auto max-w-2xl space-y-5 animate-fade-up">
+        {/* Amount */}
+        <section className="lux-card p-6 sm:p-8">
+          <div className="relative z-10">
+            <div className="flex justify-center">
+              <div className="inline-flex rounded-2xl bg-white/[0.07] p-1">
+                {[
+                  { v: 'spend', l: 'Pengeluaran', i: 'north_east' },
+                  { v: 'income', l: 'Pemasukan', i: 'south_west' },
+                ].map((o) => (
+                  <button key={o.v} type="button" onClick={() => setKind(o.v)} aria-pressed={kind === o.v}
+                    className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-[13px] font-semibold transition ${
+                      kind === o.v ? 'bg-[#F2EFE8] text-[#0f1513]' : 'text-[#F2EFE8]/60 hover:text-[#F2EFE8]'
+                    }`}>
+                    <Icon name={o.i} className="text-[16px]" />{o.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-8 flex items-baseline justify-center gap-2">
+              <span className="text-xl font-medium text-[#F2EFE8]/50">Rp</span>
               <AmountInput
                 aria-label="Jumlah transaksi"
-                className="w-full min-w-0 border-0 bg-transparent p-0 text-4xl font-extrabold tracking-tight text-white placeholder:text-white/35 focus:ring-0 sm:text-5xl"
+                autoFocus
+                className="num min-w-0 max-w-full border-0 bg-transparent p-0 text-left text-5xl font-semibold text-[#F2EFE8] outline-none placeholder:text-[#F2EFE8]/25 sm:text-6xl"
                 placeholder="0"
+                style={{ width: `${Math.max(amount.length, 1) + 0.6}ch` }}
                 value={amount}
                 onChange={setAmount}
                 required
               />
             </div>
-            <p className="mt-2 text-sm text-white/70">{isIncome ? 'Pemasukan akan menambah saldo akun.' : 'Pengeluaran akan mengurangi saldo akun.'}</p>
-          </div>
-
-          <div className="space-y-7 p-5 sm:p-9">
-            {error && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>}
-
-            <section>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">Kategori</h2>
-                <span className="text-xs text-slate-400">Pilih satu</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                {categories.map((item) => {
-                  const active = category.name === item.name;
-                  return (
-                    <button key={item.name} type="button" onClick={() => setCategory(item)} aria-pressed={active}
-                      className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 text-xs font-semibold transition ${active ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
-                      <span className="material-symbols-outlined">{item.icon}</span>
-                      {item.name === 'Income' ? 'Pemasukan' : item.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section>
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">{isIncome ? 'Masuk ke akun' : 'Bayar dari akun'}</h2>
-                <Link to="/money-details" className="text-xs font-bold text-emerald-700 dark:text-emerald-400">+ Tambah akun</Link>
-              </div>
-              {accounts.length ? (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {accounts.map((account) => {
-                    const active = String(account.id) === selectedAccountId;
-                    return (
-                      <button key={account.id} type="button" onClick={() => setSelectedAccountId(String(account.id))} aria-pressed={active}
-                        className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? 'border-emerald-600 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40' : 'border-slate-200 hover:border-emerald-300 dark:border-slate-700'}`}>
-                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${account.account_type === 'cash' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300' : account.account_type === 'ewallet' ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'}`}>
-                          <span className="material-symbols-outlined">{account.account_type === 'cash' ? 'payments' : account.account_type === 'ewallet' ? 'account_balance_wallet' : 'account_balance'}</span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">{account.name}</span>
-                          <span className="block text-xs text-slate-500">Saldo Rp {formatIDR(account.balance)}</span>
-                        </span>
-                        {active && <span className="material-symbols-outlined text-emerald-700 dark:text-emerald-400">check_circle</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center dark:border-slate-700">
-                  <p className="text-sm text-slate-500">Belum ada akun untuk transaksi.</p>
-                  <Link to="/money-details" className="mt-2 inline-block text-sm font-bold text-emerald-700 dark:text-emerald-400">Buat akun pertama</Link>
-                </div>
-              )}
-            </section>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-xs font-bold text-slate-500">
-                TANGGAL
-                <input className="mt-2 block w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
-              </label>
-              <label className="block text-xs font-bold text-slate-500">
-                CATATAN
-                <input className="mt-2 block w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 placeholder:font-normal focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" placeholder="Contoh: Gaji bulanan" value={note} onChange={(event) => setNote(event.target.value)} />
-              </label>
+            <p className="mt-3 text-center text-[13px] text-[#F2EFE8]/55">
+              {isIncome ? 'Menambah saldo akun yang dipilih' : 'Mengurangi saldo akun yang dipilih'}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {[10000, 50000, 100000, 500000].map((amt) => (
+                <button key={amt} type="button" onClick={() => setAmount(String(amt))}
+                  className="rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-1.5 text-xs font-semibold text-[#F2EFE8]/75 transition hover:border-[#D6B97B]/50 hover:text-[#F2EFE8]">
+                  {amt >= 1_000_000 ? `${amt / 1_000_000} jt` : `${amt / 1_000} rb`}
+                </button>
+              ))}
             </div>
-
-            <button disabled={isSaving || !accounts.length} type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-4 font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
-              {isSaving ? <><span className="material-symbols-outlined animate-spin">progress_activity</span> Menyimpan…</> : <>Simpan {isIncome ? 'Pemasukan' : 'Transaksi'}<span className="material-symbols-outlined">arrow_forward</span></>}
-            </button>
           </div>
-        </form>
-      </main>
-    </div>
+        </section>
+
+        {error && <Alert>{error}</Alert>}
+
+        {/* Category */}
+        {!isIncome && (
+          <Card className="card-pad">
+            <p className="label">Kategori</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              {EXPENSE_CATEGORIES.map((name) => {
+                const meta = CATEGORIES[name];
+                const active = expenseCategory === name;
+                return (
+                  <button key={name} type="button" onClick={() => setExpenseCategory(name)} aria-pressed={active}
+                    className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3.5 text-[12px] font-semibold transition ${
+                      active ? 'border-gold/60 bg-gold/10 text-ink' : 'border-line text-ink-2 hover:border-ink/20 hover:text-ink'
+                    }`}>
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ color: meta.color, background: `color-mix(in srgb, ${meta.color} 14%, transparent)` }}>
+                      <Icon name={meta.icon} fill={active} />
+                    </span>
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
+        {/* Account */}
+        <Card className="card-pad">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="label !mb-0">{isIncome ? 'Masuk ke akun' : 'Dibayar dari akun'}</p>
+            <Link to="/money-details" className="text-[12px] font-semibold text-gold hover:underline">+ Tambah akun</Link>
+          </div>
+          {accounts.length ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {accounts.map((account) => {
+                const active = String(account.id) === selectedAccountId;
+                const meta = accountMeta(account.account_type);
+                return (
+                  <button key={account.id} type="button" onClick={() => setSelectedAccountId(String(account.id))} aria-pressed={active}
+                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? 'border-gold/60 bg-gold/10' : 'border-line hover:border-ink/20'}`}>
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink-2">
+                      <Icon name={meta.icon} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold text-ink">{account.name}</span>
+                      <span className="num block text-[12px] text-ink-3">{formatIDR(account.balance)}</span>
+                    </span>
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition ${active ? 'border-gold bg-gold' : 'border-line'}`}>
+                      {active && <Icon name="check" className="text-[14px] text-[#14110a]" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState icon="account_balance_wallet" title="Belum ada akun" text="Buat akun dulu (bank, tunai, atau dompet digital)."
+              action={<Link to="/money-details" className="btn-primary">Buat akun pertama</Link>} />
+          )}
+        </Card>
+
+        {/* Details */}
+        <Card className="card-pad grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="label">Tanggal</span>
+            <input className="field" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+          </label>
+          <label className="block">
+            <span className="label">Catatan <span className="font-normal text-ink-3">(opsional)</span></span>
+            <input className="field" placeholder={isIncome ? 'Contoh: Gaji bulanan' : 'Contoh: Makan siang'} value={note} onChange={(event) => setNote(event.target.value)} />
+          </label>
+        </Card>
+
+        <button disabled={isSaving || !accounts.length} type="submit" className="btn-primary w-full py-4 text-[15px]">
+          {isSaving
+            ? <><Icon name="progress_activity" className="animate-spin" />Menyimpan…</>
+            : <><Icon name="check" />Simpan {isIncome ? 'pemasukan' : 'pengeluaran'}</>}
+        </button>
+      </form>
+    </AppShell>
   );
 }

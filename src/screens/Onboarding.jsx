@@ -1,111 +1,92 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import { useContext } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { ThemeButton } from '../components/AppShell';
+import { Icon, Logo } from '../components/ui';
+import { AuthContext } from '../context/AuthContext';
+
+const FEATURES = [
+  { icon: 'bolt', title: 'Catat dalam detik', text: 'Jumlah, kategori, akun — selesai. Tanpa formulir panjang.' },
+  { icon: 'account_balance_wallet', title: 'Semua akun, satu tempat', text: 'Bank, tunai, dan dompet digital dengan saldo yang selalu sesuai.' },
+  { icon: 'insights', title: 'Insight yang jelas', text: 'Lihat ke mana uangmu pergi dan pos mana yang bisa dihemat.' },
+  { icon: 'flag', title: 'Tujuan yang tercapai', text: 'Tabung untuk rencana besar dan pantau progresnya.' },
+];
+
+function PreviewCard() {
+  return (
+    <div className="relative mx-auto w-full max-w-sm">
+      <div className="absolute -inset-10 rounded-full bg-gold/10 blur-3xl" />
+      <div className="lux-card relative p-7">
+        <div className="relative z-10">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#F2EFE8]/55">Total saldo</p>
+          <p className="num mt-2 text-4xl font-semibold">Rp 24.850.000</p>
+          <div className="mt-6 flex h-24 items-end gap-2">
+            {[38, 62, 45, 80, 52, 30, 70].map((h, i) => (
+              <span key={i} className={`flex-1 rounded-t-[4px] ${i === 6 ? 'bg-[#D6B97B]' : 'bg-white/15'}`} style={{ height: `${h}%` }} />
+            ))}
+          </div>
+          <div className="mt-6 space-y-3">
+            {[
+              { i: 'restaurant', t: 'Makan siang', a: '−Rp 45.000' },
+              { i: 'south_west', t: 'Gaji bulanan', a: '+Rp 8.500.000', pos: true },
+            ].map((r) => (
+              <div key={r.t} className="flex items-center gap-3 rounded-2xl bg-white/[0.05] p-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.08]"><Icon name={r.i} className="text-[18px]" /></span>
+                <span className="flex-1 text-[13px]">{r.t}</span>
+                <span className={`num text-[13px] font-semibold ${r.pos ? 'text-[#7FE0B4]' : ''}`}>{r.a}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-center text-[11px] text-ink-3">Contoh tampilan</p>
+    </div>
+  );
+}
 
 export default function Onboarding() {
+  const { user } = useContext(AuthContext);
+  if (user) return <Navigate to="/home" replace />;
+
   return (
-    <main className="w-full max-w-[1440px] px-6 md:px-12 flex flex-col min-h-screen">
-      <header className="py-8 flex justify-between items-center w-full">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary-container rounded-md flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
-          </div>
-          <span className="text-2xl font-extrabold text-primary tracking-tight font-headline">DuitFlow</span>
+    <div className="mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-5 sm:px-8">
+      <header className="flex items-center justify-between py-6">
+        <Logo />
+        <div className="flex items-center gap-1">
+          <ThemeButton />
+          <Link to="/login" className="btn-quiet">Masuk</Link>
         </div>
-        <Link className="text-sm font-bold text-primary hover:opacity-80 transition-opacity font-label uppercase tracking-widest" to="/login">Log In</Link>
       </header>
 
-      <section className="flex-1 flex flex-col md:grid md:grid-cols-12 gap-12 items-center py-12">
-        <div className="order-2 md:order-1 md:col-span-6 lg:col-span-5 flex flex-col space-y-8">
-          <div className="space-y-4">
-            <span className="bg-secondary-container text-on-secondary-container px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] font-label inline-block">
-              Smart Finance
-            </span>
-            <h1 className="text-5xl lg:text-7xl font-extrabold text-on-surface leading-[1.1] tracking-tight">
-              DuitFlow: <br/>
-              <span className="text-primary italic">Spend Smarter.</span>
-            </h1>
-            <p className="text-lg text-on-surface-variant font-body leading-relaxed max-w-md">
-              Track your daily expenses, understand your monthly spending, and hit your savings goals with ease.
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-6 pt-4">
-            <Link to="/register" className="flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-br from-primary to-primary-dim px-10 py-5 text-lg font-bold text-on-primary shadow-[0_14px_34px_rgba(70,210,145,0.2)] transition-all hover:scale-[1.02] active:scale-95 sm:w-auto">
-              Get Started
-              <span className="material-symbols-outlined text-2xl">arrow_forward</span>
-            </Link>
-            <button className="font-bold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
-              View Demo
-              <span className="material-symbols-outlined text-lg">play_circle</span>
-            </button>
-          </div>
-          <div className="pt-8 grid grid-cols-2 gap-4">
-            <div className="bg-surface-container-low p-6 rounded-xl space-y-2">
-              <div className="flex -space-x-2">
-                <img alt="User" className="w-8 h-8 rounded-full border-2 border-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLknvc50Gtlt8lVKhEgUMrW9zbWMNTPWaUEZO_bcrU9vSPVpUgC_xRS0Pvk0JJhg2G_GuH0LvRPhC1eZKCcxF-Yplr3ebDhRaADtIgvn3ak23qIJNqKG3-kwifgenIVMRGwJg73mQmOFKMXj9MEeo0egzzBFYTZNK7sRyUesJWY5JCFiSc1Fo8OSe9jjKd53HyqcjHm_y7EQMlwbOIZ1Z8nfAzONwMOFYvjPIPVCA4AGqQgjWDlZS1Xq3rHmqQm2P0wgBe1NC77ZGc" />
-                <img alt="User" className="w-8 h-8 rounded-full border-2 border-surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdWsvMQsy8cZnZEtKa2OPupcf-i62nAn2oYSROjWC5CBA-JgYrjTL1ArcEGSb2xovQn7xKm6AIga2QssN_gTWhsDHOZMFuaXlpZ_PL23mFay5tUCEl42Ah8synaXvF8Db3OO62sxA5LyjVaTelyasBskEIJroyl1d4nLmI-d5O8i-mii1IzwM8owyWNb0VQVrmsrybK8VUJu4fm_H9kNN7bz_qlWPoovZwo7X3ceT6TCzMzIWR0hRJbW8V9zzJuw35vMPCo8q1vEOV" />
-                <div className="w-8 h-8 rounded-full border-2 border-surface bg-primary-container flex items-center justify-center text-[10px] font-bold">+10k</div>
-              </div>
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label">Active Savers</p>
-            </div>
-            <div className="bg-surface-container-low p-6 rounded-xl space-y-1">
-              <p className="text-2xl font-bold text-primary font-headline">$2.4M</p>
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider font-label">Total Tracked</p>
-            </div>
+      <section className="grid flex-1 items-center gap-14 py-10 lg:grid-cols-2 lg:py-16">
+        <div className="animate-fade-up">
+          <span className="chip border border-gold/30 bg-gold/10 text-gold"><Icon name="auto_awesome" className="text-[14px]" />Keuangan pribadi, disederhanakan</span>
+          <h1 className="mt-6 font-display text-[52px] leading-[1.02] tracking-tight text-ink sm:text-[72px]">
+            Kelola uang dengan <em className="text-gold">tenang.</em>
+          </h1>
+          <p className="mt-6 max-w-md text-[17px] leading-relaxed text-ink-2">
+            DuitFlow membantu kamu mencatat setiap rupiah, memahami kebiasaan belanja, dan mencapai tujuan finansial — tanpa ribet.
+          </p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <Link to="/register" className="btn-primary px-7 py-4 text-[15px]">Mulai gratis<Icon name="arrow_forward" className="text-[18px]" /></Link>
+            <Link to="/login" className="btn-ghost px-7 py-4 text-[15px]">Saya sudah punya akun</Link>
           </div>
         </div>
-
-        <div className="order-1 md:order-2 md:col-span-6 lg:col-span-7 relative w-full h-full min-h-[400px] flex items-center justify-center">
-          <div className="absolute inset-0 bg-gradient-to-tr from-primary-container/30 to-tertiary-container/20 rounded-[3rem] -rotate-3 blur-3xl"></div>
-          <div className="relative w-full aspect-square md:aspect-video lg:aspect-square flex items-center justify-center">
-            <div className="absolute top-10 right-10 z-20 bg-surface-container-lowest p-6 rounded-xl editorial-shadow w-48 hidden lg:block transform rotate-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-md bg-secondary-container flex items-center justify-center text-on-secondary-container">
-                  <span className="material-symbols-outlined">payments</span>
-                </div>
-                <div className="flex-1">
-                  <div className="h-2 w-16 bg-surface-container rounded-full mb-1"></div>
-                  <div className="h-2 w-10 bg-surface-container-high rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-xl font-bold text-on-surface">$124.50</p>
-            </div>
-            
-            <div className="relative z-10 w-full max-w-[500px] bg-white rounded-xl overflow-hidden editorial-shadow p-4">
-              <img className="w-full h-full object-cover rounded-lg" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCh3DA4MQ9oqSyP9hFx6r7FizRXiswnPD0tcLLTgTOeJZagqWXxxYt_NJ2mrO63a6dRC3vlBvXZQWyyumAzYLLdKS6q2PmIrNB4ez69tcQ2zC5HXfjBMPOnTohuc6yyQfyE_3JBRnTQhkOX8VKDB8gZsN1QSDizIwnMb5ddq77k95W6ZmDa9Bf4LE6dkyMeO9qLLf1af3qfvyXiuRS4SyleeKRyNyE-rcEJqY2OZ9mLT0NhIlQHkfhC5Si5p5AevrmmXizayfB8OaLZ" alt="Illustration" />
-              <div className="absolute bottom-10 left-10 bg-surface/90 backdrop-blur-md p-4 rounded-xl editorial-shadow border border-white/20">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>trending_up</span>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">Savings Velocity</p>
-                    <p className="text-lg font-bold text-primary">+12.5% this month</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute -bottom-6 -right-4 z-20 bg-tertiary text-on-tertiary p-6 rounded-xl editorial-shadow hidden md:flex items-center gap-4 -rotate-2">
-              <div className="w-12 h-12 rounded-full bg-tertiary-container flex items-center justify-center text-on-tertiary-container">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>track_changes</span>
-              </div>
-              <div>
-                <p className="text-sm font-bold">New Goal Hit!</p>
-                <p className="text-[10px] opacity-80 uppercase tracking-widest font-label">Europe Trip 2024</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className="animate-fade-up [animation-delay:120ms]"><PreviewCard /></div>
       </section>
 
-      <footer className="py-12 mt-auto border-t border-surface-container-high/50 flex flex-col md:flex-row justify-between items-center gap-8">
-        <div className="flex items-center gap-8 opacity-40 grayscale contrast-125">
-          <span className="text-xl font-black tracking-tighter">FINTECH+</span>
-          <span className="text-xl font-black tracking-tighter">GLOBAL BANK</span>
-          <span className="text-xl font-black tracking-tighter">TRUST_CO</span>
-        </div>
-        <p className="text-xs text-on-surface-variant font-label font-bold uppercase tracking-widest">
-          Secure 256-bit encryption for your data.
-        </p>
+      <section className="grid gap-4 pb-16 sm:grid-cols-2 lg:grid-cols-4">
+        {FEATURES.map((f) => (
+          <div key={f.title} className="card p-5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 text-gold"><Icon name={f.icon} /></span>
+            <p className="mt-4 text-[15px] font-semibold text-ink">{f.title}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-ink-3">{f.text}</p>
+          </div>
+        ))}
+      </section>
+
+      <footer className="border-t border-line py-6 text-center text-[12px] text-ink-3">
+        © {new Date().getFullYear()} DuitFlow · Dibuat untuk ketenangan finansialmu
       </footer>
-    </main>
+    </div>
   );
 }

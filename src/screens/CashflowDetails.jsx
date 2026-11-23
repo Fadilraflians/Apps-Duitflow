@@ -1,79 +1,45 @@
-import React, { useContext, useMemo } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import BottomNavBar from '../components/BottomNavBar';
+import { useContext, useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import AppShell from '../components/AppShell';
+import { Card, EmptyState, TxRow } from '../components/ui';
 import { FinanceContext } from '../context/FinanceContext';
 import { localMonthKey } from '../utils/dates';
+import { formatIDR, monthLabel } from '../utils/format';
 
 export default function CashflowDetails() {
   const { type } = useParams();
   const [searchParams] = useSearchParams();
   const month = searchParams.get('month');
-  const navigate = useNavigate();
   const { transactions } = useContext(FinanceContext);
   const mode = type === 'spend' ? 'spend' : 'income';
 
-  const formatIDR = (value) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-
   const filtered = useMemo(
-    () =>
-      [...transactions]
-        .filter((tx) => (mode === 'spend' ? tx.negative : !tx.negative)
-          && (!month || localMonthKey(tx.time) === month))
-        .sort((a, b) => new Date(b.time) - new Date(a.time)),
+    () => [...transactions]
+      .filter((tx) => (mode === 'spend' ? tx.negative : !tx.negative) && (!month || localMonthKey(tx.time) === month))
+      .sort((a, b) => new Date(b.time) - new Date(a.time)),
     [transactions, mode, month]
   );
+  const total = filtered.reduce((s, tx) => s + tx.amount, 0);
+  const title = mode === 'income' ? 'Semua pemasukan' : 'Semua pengeluaran';
 
   return (
-    <div className="min-h-screen bg-[#090f12] pb-28 text-slate-100">
-      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-[#10191d]/90 px-6 py-4 backdrop-blur-xl">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-[#006a2d]"
-        >
-          <span className="material-symbols-outlined text-base">arrow_back</span>
-          Back
-        </button>
-        <h1 className="font-['Plus_Jakarta_Sans'] font-bold text-sm tracking-[0.18em] text-[#006a2d] dark:text-[#6bff8f]">
-          SEMUA UANG {mode === 'income' ? 'MASUK' : 'KELUAR'}{month ? ` · ${month}` : ''}
-        </h1>
-        <span className="w-6" />
-      </header>
-
-      <main className="px-6 max-w-3xl mx-auto mt-4">
-        <section className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/70 dark:border-slate-800 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
-          <div className="space-y-2 max-h-[68vh] overflow-y-auto pr-1">
-            {filtered.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
-                <div>
-                  <p className="text-sm font-semibold">{tx.title}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {tx.category} • {new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short' }).format(new Date(tx.time))}
-                  </p>
-                </div>
-                <p className={`text-sm font-bold ${mode === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {mode === 'income' ? '+' : '-'}
-                  {formatIDR(tx.amount)}
-                </p>
-              </div>
-            ))}
-            {filtered.length === 0 && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 text-center py-6">
-                Tidak ada transaksi {mode}.
-              </p>
-            )}
+    <AppShell title={title} subtitle={month ? monthLabel(month) : 'Seluruh periode'} back>
+      <Card className="card-pad mb-5 flex items-center justify-between animate-fade-up">
+        <div>
+          <p className="text-[13px] text-ink-3">Total{month ? ` · ${monthLabel(month)}` : ''}</p>
+          <p className={`num mt-1 text-2xl font-semibold ${mode === 'income' ? 'text-pos' : 'text-ink'}`}>{formatIDR(total)}</p>
+        </div>
+        <p className="text-[13px] text-ink-3">{filtered.length} transaksi</p>
+      </Card>
+      <Card className="px-3 py-2 animate-fade-up sm:px-4">
+        {filtered.length ? (
+          <div className="divide-y divide-line/70">
+            {filtered.map((tx) => <TxRow key={tx.id} tx={tx} />)}
           </div>
-        </section>
-      </main>
-
-      <BottomNavBar />
-    </div>
+        ) : (
+          <div className="p-3"><EmptyState icon="receipt_long" title={`Belum ada ${mode === 'income' ? 'pemasukan' : 'pengeluaran'}`} /></div>
+        )}
+      </Card>
+    </AppShell>
   );
 }
-

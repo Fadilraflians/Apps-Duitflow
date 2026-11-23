@@ -1,391 +1,230 @@
-import React, { useContext, useState } from 'react';
-import BottomNavBar from '../components/BottomNavBar';
-import { GoalsContext } from '../context/GoalsContext';
-import { AuthContext } from '../context/AuthContext';
-import { FinanceContext } from '../context/FinanceContext';
+import { useContext, useState } from 'react';
+import AppShell from '../components/AppShell';
+import { Alert, Card, EmptyState, Icon, Modal, ProgressBar, QuickAmounts, SectionHeader } from '../components/ui';
 import AmountInput, { parseAmount } from '../components/AmountInput';
+import { GoalsContext } from '../context/GoalsContext';
+import { formatIDR } from '../utils/format';
+
+const GOAL_ICONS = ['flag', 'flight', 'directions_car', 'home', 'school', 'laptop_mac', 'favorite', 'savings', 'beach_access', 'phone_iphone', 'diamond', 'celebration'];
+const getSafeIcon = (iconName) => (/^[a-z_]+$/.test(iconName || '') ? iconName : 'flag');
+const pctOf = (g) => (g.target_amount > 0 ? Math.min((g.saved_amount / g.target_amount) * 100, 100) : 0);
 
 export default function Goals() {
   const { goals, addGoal, addFundsToGoal, deleteGoal } = useContext(GoalsContext);
-  const { user } = useContext(AuthContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const firstName = user?.full_name?.split(' ')?.[0] || user?.email?.split('@')?.[0] || 'Guest';
-  
-  // Add Funds Modal State
-  const [isFundModalOpen, setIsFundModalOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
   const [activeFundGoal, setActiveFundGoal] = useState(null);
   const [fundAmount, setFundAmount] = useState('');
   const [fundError, setFundError] = useState('');
-  
-  // Create Goal Modal State
+  const [funding, setFunding] = useState(false);
+
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [icon, setIcon] = useState('flag');
   const [isPriority, setIsPriority] = useState(false);
 
-  const formatIDR = (value) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
-  };
-  const getSafeIcon = (iconName) => (/^[a-z_]+$/.test(iconName || '') ? iconName : 'flag');
-
   const handleAddGoal = (e) => {
     e.preventDefault();
     if (!title || !targetAmount) return;
-    
-    addGoal({
-      title,
-      description,
-      target_amount: parseAmount(targetAmount),
-      icon,
-      is_priority: isPriority
-    });
-    
-    setTitle('');
-    setDescription('');
-    setTargetAmount('');
-    setIcon('flag');
-    setIsPriority(false);
+    addGoal({ title, description, target_amount: parseAmount(targetAmount), icon, is_priority: isPriority });
+    setTitle(''); setDescription(''); setTargetAmount(''); setIcon('flag'); setIsPriority(false);
     setIsModalOpen(false);
   };
 
   const handleAddFundsSubmit = (e) => {
     e.preventDefault();
-    if (!activeFundGoal) return;
-    const parsedFundAmount = parseAmount(fundAmount);
-    if (!parsedFundAmount || isNaN(parsedFundAmount) || parsedFundAmount <= 0) {
-      setFundError('Masukkan nominal yang valid');
+    if (!activeFundGoal || funding) return;
+    const parsed = parseAmount(fundAmount);
+    if (!parsed || Number.isNaN(parsed) || parsed <= 0) {
+      setFundError('Masukkan nominal yang valid.');
       return;
     }
     setFundError('');
-    addFundsToGoal(activeFundGoal.id, parsedFundAmount).then((result) => {
+    setFunding(true);
+    addFundsToGoal(activeFundGoal.id, parsed).then((result) => {
+      setFunding(false);
       if (result?.ok) {
-        setIsFundModalOpen(false);
         setFundAmount('');
         setActiveFundGoal(null);
         return;
       }
-      setFundError(result?.error || 'Gagal menambah dana');
+      setFundError(result?.error || 'Gagal menambah dana.');
     });
   };
 
-  const openFundModal = (goal) => {
-    setActiveFundGoal(goal);
-    setFundAmount('');
-    setFundError('');
-    setIsFundModalOpen(true);
-  };
+  const openFundModal = (goal) => { setActiveFundGoal(goal); setFundAmount(''); setFundError(''); };
 
-  const priorityGoal = goals.find(g => g.is_priority);
-  const secondaryGoals = goals.filter(g => !g.is_priority);
+  const priorityGoal = goals.find((g) => g.is_priority);
+  const secondaryGoals = goals.filter((g) => !g.is_priority);
+  const totalSaved = goals.reduce((s, g) => s + Number(g.saved_amount || 0), 0);
+  const totalTarget = goals.reduce((s, g) => s + Number(g.target_amount || 0), 0);
+
+  const newGoalButton = (
+    <button type="button" onClick={() => setIsModalOpen(true)} className="btn-primary py-2.5">
+      <Icon name="add" />Tujuan baru
+    </button>
+  );
 
   return (
-    <div className="min-h-screen bg-[#090f12] pb-32 text-on-surface selection:bg-primary-container selection:text-on-primary-container">
-      {/* Top App Bar */}
-      <header className="w-full top-0 sticky z-50 backdrop-blur bg-white/85 dark:bg-slate-950/85 border-b border-slate-200/60 dark:border-slate-800 flex justify-between items-center px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center overflow-hidden">
-            <span className="material-symbols-outlined text-emerald-700 dark:text-emerald-200">person</span>
-          </div>
+    <AppShell title="Tujuan" subtitle="Wujudkan rencana besar, sedikit demi sedikit.">
+      {goals.length > 0 && (
+        <div className="mb-5 flex items-center justify-between gap-4 animate-fade-up">
           <div>
-            <span className="text-lg font-headline font-bold text-[#006a2d] dark:text-[#6bff8f] tracking-tight">{firstName}</span>
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Goals</p>
+            <p className="text-[13px] text-ink-3">Total terkumpul</p>
+            <p className="num text-lg font-semibold text-ink">{formatIDR(totalSaved)} <span className="text-[13px] font-normal text-ink-3">/ {formatIDR(totalTarget)}</span></p>
           </div>
-        </div>
-        <button className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-200/50 rounded-full transition-transform active:scale-95">
-          <span className="material-symbols-outlined">notifications</span>
-        </button>
-      </header>
-      
-      <main className="px-4 sm:px-6 pb-32 pt-3 sm:pt-4 max-w-2xl mx-auto">
-        <div className="relative mb-8 sm:mb-10 mt-4 overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 rounded-[2rem] p-6 sm:p-8 md:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.04)] group">
-          {/* Subtle Decorative Elements */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50 dark:bg-emerald-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60 pointer-events-none group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-blue-50 dark:bg-blue-900/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
-
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 mb-4 border border-emerald-100/50 dark:border-emerald-800/50 shadow-sm">
-                <span className="material-symbols-outlined text-sm">stars</span>
-                <span className="font-label text-[10px] font-extrabold uppercase tracking-widest">Goal Planner</span>
-              </div>
-              <h1 className="font-headline text-3xl sm:text-4xl md:text-[2.75rem] font-extrabold tracking-tight text-slate-800 dark:text-slate-100 leading-[1.15] mb-3">
-                Bangun finansial dengan <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">lebih terarah.</span>
-              </h1>
-              <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed font-body">
-                Pantau progres, prioritaskan mimpi besarmu, dan tambahkan dana kapan saja dengan mudah.
-              </p>
-            </div>
-            
-            {/* Elegant Vector / Icon Right Side */}
-            <div className="hidden md:flex shrink-0 w-32 h-32 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-900/20 dark:to-teal-900/10 items-center justify-center shadow-inner relative transform group-hover:-translate-y-1 transition-transform duration-500 border border-white dark:border-slate-800">
-               <span className="material-symbols-outlined text-6xl text-emerald-500/80 dark:text-emerald-400/80 drop-shadow-sm">rocket_launch</span>
-               {/* animated rings */}
-               <div className="absolute inset-0 border border-emerald-200/50 dark:border-emerald-700/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
-               <div className="absolute top-2 left-2 right-2 bottom-2 border border-dashed border-teal-200/50 dark:border-teal-700/30 rounded-full animate-[spin_15s_linear_infinite_reverse]"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Priority Goal */}
-        {priorityGoal && (
-          <section className="mb-8 sm:mb-12 relative group transform hover:scale-[1.01] transition-all duration-300">
-            <div className="relative overflow-hidden rounded-3xl border border-emerald-200/10 bg-gradient-to-br from-[#12372b] via-[#145641] to-[#1b7552] p-6 text-white shadow-[0_24px_70px_rgba(0,0,0,0.3)] sm:p-8">
-              {/* Decorative Glows */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-white/20 transition-all duration-700 pointer-events-none"></div>
-              <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
-
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 relative z-10">
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-white/20 backdrop-blur text-white px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-300 rounded-full animate-pulse"></span> Active Priority</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (window.confirm("Apakah Anda yakin ingin menghapus goal ini?")) {
-                          deleteGoal(priorityGoal.id);
-                        }
-                      }}
-                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-rose-500/80 text-white flex items-center justify-center transition-colors"
-                      title="Delete Goal"
-                    >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                    </button>
-                  </div>
-                  <h2 className="font-headline text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight drop-shadow-md">{priorityGoal.title}</h2>
-                  <p className="font-body text-sm text-emerald-50 dark:text-slate-300 opacity-90 mb-6">{priorityGoal.description}</p>
-
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-end">
-                      <div>
-                        <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-100/80 mb-1 block">Saved so far</span>
-                        <span className="font-headline text-2xl sm:text-4xl font-extrabold text-white drop-shadow-sm">{formatIDR(priorityGoal.saved_amount)}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-100/80 mb-1 block">Target</span>
-                        <span className="font-headline text-base sm:text-xl font-bold text-emerald-50">{formatIDR(priorityGoal.target_amount)}</span>
-                      </div>
-                    </div>
-                    {/* Progress Bar */}
-                    <div className="h-3 w-full bg-black/20 rounded-full overflow-hidden border border-white/10 shadow-inner">
-                      <div className="h-full bg-white rounded-full transition-all duration-1000" style={{ width: `${Math.min((priorityGoal.saved_amount / priorityGoal.target_amount) * 100, 100)}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Circular Visualization */}
-                <div className="flex flex-col items-center justify-center gap-4 self-center pt-2 md:pt-0">
-                  <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
-                    <svg className="w-full h-full -rotate-90">
-                      <circle className="text-black/10" cx="72" cy="72" fill="transparent" r="64" stroke="currentColor" strokeWidth="8"></circle>
-                      <circle cx="72" cy="72" fill="transparent" r="64" stroke="white" 
-                        strokeDasharray="402" 
-                        strokeDashoffset={402 - (Math.min((priorityGoal.saved_amount / priorityGoal.target_amount), 1) * 402)} 
-                        strokeLinecap="round" strokeWidth="8"></circle>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="font-headline text-2xl sm:text-3xl font-extrabold text-white drop-shadow-md">{Math.round((priorityGoal.saved_amount / priorityGoal.target_amount) * 100)}%</span>
-                      <span className="font-label text-[9px] font-bold uppercase tracking-tighter text-emerald-100/80">Progress</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative z-10 mt-8 pt-6 border-t border-white/15 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-inner transform group-hover:rotate-6 transition-transform duration-300">
-                    <span className="material-symbols-outlined text-2xl opacity-90">{getSafeIcon(priorityGoal.icon)}</span>
-                  </div>
-                  <div>
-                    <span className="font-label text-[10px] font-bold uppercase tracking-widest text-emerald-100/80 block">Active Status</span>
-                    <span className="font-body text-sm font-bold text-white tracking-wide">Saving Mode</span>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => openFundModal(priorityGoal)}
-                  className="whitespace-nowrap rounded-full bg-emerald-300 px-5 py-2.5 font-label text-[10px] font-extrabold uppercase tracking-widest text-slate-950 shadow-lg shadow-emerald-900/20 transition-all hover:scale-105 active:scale-95 sm:px-6 sm:text-xs"
-                >
-                  Add Funds
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Other Goals Section */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-headline text-xl font-bold text-on-surface">Secondary Aspirations</h3>
-            <span className="text-outline-variant font-label text-xs font-bold uppercase tracking-widest">{secondaryGoals.length} Goals</span>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            {secondaryGoals.map(g => {
-              const progressStr = `${Math.round((g.saved_amount / g.target_amount) * 100)}%`;
-              return (
-              <div key={g.id} className="bg-white/90 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800 rounded-2xl p-4 sm:p-5 hover:shadow-lg transition-all group relative">
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 rounded-md bg-surface-container-lowest flex items-center justify-center shadow-sm overflow-hidden">
-                    <span className="material-symbols-outlined text-tertiary text-[22px] leading-none">{getSafeIcon(g.icon)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline text-sm font-bold text-primary">{progressStr}</span>
-                    <button 
-                      onClick={() => {
-                        if (window.confirm("Apakah Anda yakin ingin menghapus goal ini?")) {
-                          deleteGoal(g.id);
-                        }
-                      }}
-                      className="w-7 h-7 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-500 flex items-center justify-center transition-colors"
-                      title="Delete Goal"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">delete</span>
-                    </button>
-                  </div>
-                </div>
-                <h4 className="font-headline text-base sm:text-lg font-bold text-on-surface mb-1">{g.title}</h4>
-                <p className="font-body text-xs text-on-surface-variant mb-4 min-h-[2.5rem]">{g.description}</p>
-                
-                <div className="flex justify-between items-end">
-                  <div>
-                    <span className="font-label text-[9px] font-bold uppercase tracking-widest text-outline block mb-0.5">Saved</span>
-                    <span className="font-body text-sm font-bold text-on-surface">{formatIDR(g.saved_amount)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-label text-[9px] font-bold uppercase tracking-widest text-outline block mb-0.5">Goal</span>
-                    <span className="font-body text-sm font-bold text-on-surface-variant">{formatIDR(g.target_amount)}</span>
-                  </div>
-                </div>
-                <div className="mt-4 h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                  <div className="h-full bg-tertiary rounded-full" style={{ width: progressStr }}></div>
-                </div>
-                
-                <button 
-                  onClick={() => openFundModal(g)}
-                  className="w-full mt-4 bg-tertiary/10 text-tertiary py-2.5 rounded-xl font-bold text-[11px] sm:text-xs uppercase tracking-widest hover:bg-tertiary/20 transition-colors"
-                >
-                  Add Funds
-                </button>
-              </div>
-            )})}
-          </div>
-
-          <button onClick={() => setIsModalOpen(true)} className="w-full mt-5 sm:mt-6 py-5 sm:py-6 border-2 border-dashed border-outline-variant/30 bg-white/70 dark:bg-slate-900/40 rounded-2xl flex flex-col items-center justify-center group hover:border-primary/50 transition-all">
-            <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-outline group-hover:bg-primary-container group-hover:text-primary transition-colors mb-2">
-              <span className="material-symbols-outlined">add</span>
-            </div>
-            <span className="font-label text-xs font-bold uppercase tracking-widest text-outline-variant group-hover:text-primary">Create New Aspiration</span>
-          </button>
-        </section>
-      </main>
-
-      <BottomNavBar />
-
-      {/* Add Goal Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-3xl p-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold font-headline text-on-surface">New Goal</h2>
-              <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-variant transition-colors text-on-surface-variant">
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-            <form onSubmit={handleAddGoal} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-outline font-label mb-1 ml-1">Title</label>
-                <input required value={title} onChange={e=>setTitle(e.target.value)} type="text" placeholder="e.g. New MacBook Pro" className="w-full bg-surface-container rounded-xl px-4 py-3 font-body text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-outline font-label mb-1 ml-1">Description (Optional)</label>
-                <input value={description} onChange={e=>setDescription(e.target.value)} type="text" placeholder="e.g. M3 Max Setup" className="w-full bg-surface-container rounded-xl px-4 py-3 font-body text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-outline font-label mb-1 ml-1">Target Amount (Rp)</label>
-                <AmountInput required value={targetAmount} onChange={setTargetAmount} placeholder="25000000" className="w-full bg-surface-container rounded-xl px-4 py-3 font-body text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-outline font-label mb-1 ml-1">Icon Name</label>
-                  <input value={icon} onChange={e=>setIcon(e.target.value)} type="text" placeholder="flight, directions_car..." className="w-full bg-surface-container rounded-xl px-4 py-3 font-body text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                </div>
-                <div className="flex items-center gap-2 mt-5">
-                  <input type="checkbox" id="priority" checked={isPriority} onChange={e=>setIsPriority(e.target.checked)} className="w-5 h-5 rounded-md border-none bg-surface-container text-primary focus:ring-primary/20" />
-                  <label htmlFor="priority" className="text-sm font-bold text-on-surface-variant font-label">Set Priority</label>
-                </div>
-              </div>
-              
-              <button type="submit" className="w-full mt-4 py-4 bg-primary text-on-primary rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform active:scale-95">
-                Save Goal
-              </button>
-            </form>
-          </div>
+          {newGoalButton}
         </div>
       )}
 
-      {/* Add Funds Modal */}
-      {isFundModalOpen && activeFundGoal && (
-        <div className="fixed inset-0 z-[100] overflow-x-hidden flex items-end sm:items-center justify-center px-3 sm:px-4 pb-3 sm:pb-0 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[1.6rem] sm:rounded-[2rem] p-5 sm:p-8 shadow-2xl relative isolate animate-in fade-in slide-in-from-bottom-4 duration-300 max-h-[88vh] overflow-y-auto overflow-x-hidden">
-            <div className="absolute -top-8 -right-8 w-28 h-28 bg-primary-container/20 rounded-full blur-2xl pointer-events-none"></div>
-            
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center shadow-inner overflow-hidden">
-                   <span className="material-symbols-outlined text-primary text-2xl leading-none">
-                    {getSafeIcon(activeFundGoal.icon)}
-                   </span>
-                </div>
+      {priorityGoal && (
+        <section className="lux-card mb-6 p-6 animate-fade-up sm:p-8">
+          <div className="relative z-10">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#D6B97B]/15 text-[#D6B97B]">
+                  <Icon name={getSafeIcon(priorityGoal.icon)} fill />
+                </span>
                 <div className="min-w-0">
-                   <h2 className="text-lg font-bold font-headline text-on-surface leading-tight">Add Funds</h2>
-                   <p className="text-xs font-label text-outline truncate">{activeFundGoal.title}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#D6B97B]">Prioritas</p>
+                  <h2 className="truncate text-xl font-semibold sm:text-2xl">{priorityGoal.title}</h2>
                 </div>
               </div>
-              <button onClick={() => setIsFundModalOpen(false)} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-variant transition-colors text-on-surface-variant">
-                <span className="material-symbols-outlined text-lg">close</span>
+              <button type="button" onClick={() => setConfirmDelete(priorityGoal)} aria-label="Hapus tujuan"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#F2EFE8]/50 transition hover:bg-white/10 hover:text-[#F5A3A3]">
+                <Icon name="delete" className="text-[19px]" />
               </button>
             </div>
+            {priorityGoal.description && <p className="mt-3 text-[14px] text-[#F2EFE8]/60">{priorityGoal.description}</p>}
 
-            <form onSubmit={handleAddFundsSubmit} className="space-y-5 sm:space-y-6">
+            <div className="mt-8 flex items-end justify-between gap-4">
               <div>
-                <label className="block text-center text-[11px] sm:text-xs font-bold uppercase tracking-widest text-outline font-label mb-3 sm:mb-4">Amount to add (Rp)</label>
-                <AmountInput
-                  autoFocus
-                  required 
-                  value={fundAmount} 
-                  onChange={setFundAmount}
-                  placeholder="0" 
-                  className="w-full bg-transparent border-b-2 border-surface-container-high focus:border-primary text-center text-4xl sm:text-5xl font-extrabold text-on-surface font-headline focus:outline-none py-2 transition-colors placeholder:text-surface-container-highest" 
-                />
-                {fundError && (
-                  <p className="mt-2 text-center text-xs font-semibold text-rose-600 dark:text-rose-400">
-                    {fundError}
-                  </p>
-                )}
+                <p className="text-[12px] text-[#F2EFE8]/55">Terkumpul</p>
+                <p className="num mt-1 text-3xl font-semibold sm:text-4xl">{formatIDR(priorityGoal.saved_amount)}</p>
               </div>
-              
-              <div className="flex gap-2 justify-center pb-2 sm:pb-4 flex-wrap">
-                {[100000, 500000, 1000000].map(amt => (
-                  <button 
-                    key={amt} 
-                    type="button" 
-                    onClick={() => setFundAmount(amt.toString())}
-                    className="px-3 py-1.5 bg-surface-container-low hover:bg-primary-container/50 text-on-surface-variant text-xs font-bold rounded-lg transition-colors border border-surface-container"
-                  >
-                    +{amt/1000}k
-                  </button>
-                ))}
-              </div>
+              <p className="num font-display text-5xl leading-none text-[#D6B97B]">{Math.round(pctOf(priorityGoal))}%</p>
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-[#D6B97B] transition-[width] duration-700" style={{ width: `${pctOf(priorityGoal)}%` }} />
+            </div>
+            <div className="mt-2 flex justify-between text-[12px] text-[#F2EFE8]/55">
+              <span className="num">Sisa {formatIDR(Math.max(priorityGoal.target_amount - priorityGoal.saved_amount, 0))}</span>
+              <span className="num">Target {formatIDR(priorityGoal.target_amount)}</span>
+            </div>
 
-              <button type="submit" className="w-full py-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl font-bold shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:scale-[0.98] transition-all active:scale-95 flex items-center justify-center gap-2 text-base sm:text-lg">
-                <span className="material-symbols-outlined text-xl">savings</span>
-                Confirm Deposit
-              </button>
-            </form>
+            <button type="button" onClick={() => openFundModal(priorityGoal)} className="btn mt-6 w-full bg-[#D6B97B] text-[#14110a] hover:brightness-105 sm:w-auto">
+              <Icon name="savings" />Tambah dana
+            </button>
           </div>
-        </div>
+        </section>
       )}
-    </div>
+
+      {goals.length === 0 ? (
+        <Card className="card-pad animate-fade-up">
+          <EmptyState icon="flag" title="Belum ada tujuan"
+            text="Liburan, gadget baru, atau dana darurat — buat tujuan dan pantau progresnya di sini."
+            action={newGoalButton} />
+        </Card>
+      ) : secondaryGoals.length > 0 && (
+        <section className="animate-fade-up">
+          <SectionHeader title={priorityGoal ? 'Tujuan lainnya' : 'Tujuanmu'} subtitle={`${secondaryGoals.length} tujuan`} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {secondaryGoals.map((g) => {
+              const pct = pctOf(g);
+              return (
+                <Card key={g.id} className="card-pad flex flex-col">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold">
+                      <Icon name={getSafeIcon(g.icon)} />
+                    </span>
+                    <button type="button" onClick={() => setConfirmDelete(g)} className="icon-btn -mr-2 -mt-1 h-9 w-9 hover:text-neg" aria-label="Hapus tujuan">
+                      <Icon name="delete" className="text-[19px]" />
+                    </button>
+                  </div>
+                  <h3 className="mt-4 truncate text-[16px] font-semibold text-ink">{g.title}</h3>
+                  {g.description && <p className="mt-0.5 line-clamp-2 text-[13px] text-ink-3">{g.description}</p>}
+                  <div className="mt-auto pt-5">
+                    <div className="mb-2 flex items-baseline justify-between text-[13px]">
+                      <span className="num font-semibold text-ink">{formatIDR(g.saved_amount)}</span>
+                      <span className="num text-ink-3">{Math.round(pct)}% · {formatIDR(g.target_amount)}</span>
+                    </div>
+                    <ProgressBar value={pct} />
+                    <button type="button" onClick={() => openFundModal(g)} className="btn-ghost mt-4 w-full py-2.5">
+                      <Icon name="add" className="text-[18px]" />Tambah dana
+                    </button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* New goal */}
+      <Modal open={isModalOpen} onClose={() => setIsModalOpen(false)} title="Tujuan baru" subtitle="Beri nama dan target yang ingin dicapai." icon="flag">
+        <form onSubmit={handleAddGoal} className="space-y-4">
+          <label className="block">
+            <span className="label">Nama tujuan</span>
+            <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Contoh: Liburan ke Bali" className="field" />
+          </label>
+          <label className="block">
+            <span className="label">Deskripsi <span className="font-normal text-ink-3">(opsional)</span></span>
+            <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Contoh: Akhir tahun bersama keluarga" className="field" />
+          </label>
+          <label className="block">
+            <span className="label">Target (Rp)</span>
+            <AmountInput required value={targetAmount} onChange={setTargetAmount} placeholder="25.000.000" className="field num" />
+          </label>
+          <div>
+            <span className="label">Ikon</span>
+            <div className="grid grid-cols-6 gap-2">
+              {GOAL_ICONS.map((name) => (
+                <button key={name} type="button" onClick={() => setIcon(name)} aria-pressed={icon === name} aria-label={name}
+                  className={`flex aspect-square items-center justify-center rounded-xl border transition ${icon === name ? 'border-gold/60 bg-gold/15 text-gold' : 'border-line text-ink-2 hover:text-ink'}`}>
+                  <Icon name={name} fill={icon === name} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-line px-4 py-3">
+            <span>
+              <span className="block text-[14px] font-semibold text-ink">Jadikan prioritas</span>
+              <span className="block text-[12px] text-ink-3">Ditampilkan paling atas dan di beranda.</span>
+            </span>
+            <input type="checkbox" checked={isPriority} onChange={(e) => setIsPriority(e.target.checked)} className="peer sr-only" />
+            <span className="relative h-6 w-11 shrink-0 rounded-full bg-line transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-gold peer-checked:after:translate-x-5" />
+          </label>
+          <button type="submit" className="btn-primary w-full py-3.5">Simpan tujuan</button>
+        </form>
+      </Modal>
+
+      {/* Add funds */}
+      <Modal open={!!activeFundGoal} onClose={() => setActiveFundGoal(null)} title="Tambah dana" subtitle={activeFundGoal?.title} icon={getSafeIcon(activeFundGoal?.icon)}>
+        <form onSubmit={handleAddFundsSubmit} className="space-y-5">
+          <div className="rounded-3xl bg-surface-2/60 px-4 py-6 text-center">
+            <p className="eyebrow">Jumlah (Rp)</p>
+            <AmountInput autoFocus required value={fundAmount} onChange={setFundAmount} placeholder="0"
+              className="num mt-2 w-full border-0 bg-transparent p-0 text-center text-4xl font-semibold text-ink outline-none placeholder:text-ink-3/50" />
+            <p className="mt-2 text-[12px] text-ink-3">Dana diambil dari saldo akunmu.</p>
+          </div>
+          {fundError && <Alert>{fundError}</Alert>}
+          <QuickAmounts amounts={[100000, 500000, 1000000]} onPick={setFundAmount} prefix="+" />
+          <button type="submit" disabled={funding} className="btn-gold w-full py-3.5">
+            {funding ? <><Icon name="progress_activity" className="animate-spin" />Memproses…</> : <><Icon name="savings" />Konfirmasi</>}
+          </button>
+        </form>
+      </Modal>
+
+      {/* Confirm delete */}
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Hapus tujuan?" subtitle={confirmDelete?.title} icon="delete">
+        <p className="text-[14px] text-ink-2">Tujuan ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.</p>
+        <div className="mt-6 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setConfirmDelete(null)} className="btn-ghost">Batal</button>
+          <button type="button" onClick={() => { deleteGoal(confirmDelete.id); setConfirmDelete(null); }} className="btn bg-neg text-white hover:brightness-110">Hapus</button>
+        </div>
+      </Modal>
+    </AppShell>
   );
 }

@@ -1,17 +1,18 @@
-import React, { createContext, useState, useEffect } from 'react';
+import { createContext, useState } from 'react';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  
-  useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('duitflow_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Read the saved session synchronously so the first render already knows
+  // whether someone is signed in (avoids a flash of the landing page).
+  const [user, setUser] = useState(() => {
+    try {
+      const storedUser = localStorage.getItem('duitflow_user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
     }
-  }, []);
+  });
 
   const login = (userData) => {
     setUser(userData);
