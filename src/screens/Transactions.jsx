@@ -2,6 +2,7 @@ import { useContext, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinanceContext } from '../context/FinanceContext';
 import BottomNavBar from '../components/BottomNavBar';
+import { localDateKey } from '../utils/dates';
 
 export default function Transactions() {
   const { transactions } = useContext(FinanceContext);
@@ -23,7 +24,8 @@ export default function Transactions() {
 
     transactions.forEach((tx) => {
       const d = new Date(tx.time);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const key = localDateKey(d).slice(0, 7);
+      if (!key) return;
       const label = d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
       const prev = monthMap.get(key) || { key, label, income: 0, spend: 0 };
       if (tx.negative) prev.spend += tx.amount;
@@ -34,9 +36,8 @@ export default function Transactions() {
     const result = [];
     const now = new Date();
     for (let i = 2; i >= 0; i--) {
-      const d = new Date(now);
-      d.setMonth(now.getMonth() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = localDateKey(d).slice(0, 7);
       const label = d.toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
       const row = monthMap.get(key) || { income: 0, spend: 0 };
       result.push({ key, label, income: row.income || 0, spend: row.spend || 0 });
@@ -67,10 +68,7 @@ export default function Transactions() {
   const filteredTx = useMemo(() => {
     if (!filterDate) return sortedTx;
     return sortedTx.filter(tx => {
-      const d = new Date(tx.time);
-      const tzOffset = d.getTimezoneOffset() * 60000;
-      const localISOTime = new Date(d - tzOffset).toISOString().slice(0, 10);
-      return localISOTime === filterDate;
+      return localDateKey(tx.time) === filterDate;
     });
   }, [sortedTx, filterDate]);
 

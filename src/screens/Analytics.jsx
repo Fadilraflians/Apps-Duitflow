@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
 import { AuthContext } from '../context/AuthContext';
+import { getLastDays, localMonthKey, localDateKey } from '../utils/dates';
 
 export default function Analytics() {
   const { transactions, monthlySpend, currentBalance, showBalance, setShowBalance } = useContext(FinanceContext);
@@ -29,15 +30,15 @@ export default function Analytics() {
     year: 'numeric'
   }).format(new Date());
 
-  const currentYYYYMM = new Date().toISOString().slice(0, 7);
+  const currentYYYYMM = localMonthKey(new Date());
+  const todayKey = localDateKey(new Date());
   const [distributionMonth, setDistributionMonth] = useState(currentYYYYMM);
 
   const availableMonths = useMemo(() => {
     const mSet = new Set();
     transactions.forEach(tx => {
-      const d = new Date(tx.time);
-      const tzOffset = d.getTimezoneOffset() * 60000;
-      mSet.add(new Date(d - tzOffset).toISOString().slice(0, 7));
+      const monthKey = localMonthKey(tx.time);
+      if (monthKey) mSet.add(monthKey);
     });
     const arr = Array.from(mSet).sort((a,b) => b.localeCompare(a));
     if (!arr.includes(currentYYYYMM)) arr.unshift(currentYYYYMM);
@@ -47,9 +48,7 @@ export default function Analytics() {
   const { categories, totalSpendForMonth } = useMemo(() => {
     const expenses = transactions.filter(tx => {
       if (!tx.negative) return false;
-      const d = new Date(tx.time);
-      const tzOffset = d.getTimezoneOffset() * 60000;
-      const txMonth = new Date(d - tzOffset).toISOString().slice(0, 7);
+      const txMonth = localMonthKey(tx.time);
       return txMonth === distributionMonth;
     });
 
@@ -109,45 +108,27 @@ export default function Analytics() {
     });
   };
 
-  // Build income/spend time-series for 7 consecutive days ending at latest transaction date
+  // Build income/spend time-series for the last 7 calendar days, including today.
   const cashflowSeries = useMemo(() => {
     const dailyMap = new Map();
-    let latestDate = transactions.length > 0 ? new Date(transactions[0].time) : new Date();
-
     transactions.forEach((tx) => {
-      const d = new Date(tx.time);
-      if (d > latestDate) latestDate = d;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate()
-      ).padStart(2, '0')}`;
-      const label = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
-      const prev = dailyMap.get(key) || { key, label, income: 0, spend: 0 };
+      const key = localDateKey(tx.time);
+      if (!key) return;
+      const prev = dailyMap.get(key) || { income: 0, spend: 0 };
       if (tx.negative) {
-        prev.spend += tx.amount;
+        prev.spend += Number(tx.amount || 0);
       } else {
-        prev.income += tx.amount;
+        prev.income += Number(tx.amount || 0);
       }
       dailyMap.set(key, prev);
     });
-
-    const result = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(latestDate);
-      d.setDate(latestDate.getDate() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate()
-      ).padStart(2, '0')}`;
-      const row = dailyMap.get(key) || { income: 0, spend: 0 };
-      result.push({
-        key,
-        label: d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
-        income: row.income || 0,
-        spend: row.spend || 0
-      });
-    }
-
-    return result;
-  }, [transactions]);
+    return getLastDays(7).map(({ key, label }) => ({
+      key,
+      label,
+      income: dailyMap.get(key)?.income || 0,
+      spend: dailyMap.get(key)?.spend || 0
+    }));
+  }, [transactions, todayKey]);
 
   const maxDaily = Math.max(
     0,
@@ -163,9 +144,9 @@ export default function Analytics() {
   const categoryTransactions = useMemo(() => {
     if (!selectedCategory) return [];
     return [...transactions]
-      .filter((tx) => tx.negative && tx.category === selectedCategory)
+      .filter((tx) => tx.negative && tx.category === selectedCategory && localMonthKey(tx.time) === distributionMonth)
       .sort((a, b) => new Date(b.time) - new Date(a.time));
-  }, [transactions, selectedCategory]);
+  }, [transactions, selectedCategory, distributionMonth]);
   const chartPad = { left: 6, right: 6 };
   const xAt = (idx, total) => {
     if (total <= 1) return 50;

@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import { AuthContext } from './AuthContext';
+import { localMonthKey } from '../utils/dates';
 
 export const FinanceContext = createContext();
 
@@ -183,10 +184,12 @@ export const FinanceProvider = ({ children }) => {
   );
   // Fallback to transaction-derived balance when wallet API is unavailable/empty.
   const currentBalance = walletBalance !== 0 || transactions.length === 0 ? walletBalance : txDerivedBalance;
-  const monthlyIncome = transactions
+  const currentMonth = localMonthKey(new Date());
+  const currentMonthTransactions = transactions.filter((tx) => localMonthKey(tx.time) === currentMonth);
+  const monthlyIncome = currentMonthTransactions
     .filter((tx) => !tx.negative)
     .reduce((acc, curr) => acc + curr.amount, 0);
-  const monthlySpend = transactions
+  const monthlySpend = currentMonthTransactions
     .filter((tx) => tx.negative)
     .reduce((acc, curr) => acc + curr.amount, 0);
 

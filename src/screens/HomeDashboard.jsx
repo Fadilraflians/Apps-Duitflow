@@ -5,6 +5,7 @@ import { FinanceContext } from '../context/FinanceContext';
 import { GoalsContext } from '../context/GoalsContext';
 import { AuthContext } from '../context/AuthContext';
 import AmountInput, { parseAmount } from '../components/AmountInput';
+import { getLastDays, localDateKey } from '../utils/dates';
 
 export default function HomeDashboard() {
   const { transactions, currentBalance, monthlySpend, monthlyIncome, showBalance, setShowBalance } = useContext(FinanceContext);
@@ -33,8 +34,9 @@ export default function HomeDashboard() {
     }
   };
 
+  const todayKey = localDateKey(new Date());
   const dailySpend = transactions
-    .filter(tx => tx.negative && new Date(tx.time).toDateString() === new Date().toDateString())
+    .filter(tx => tx.negative && localDateKey(tx.time) === todayKey)
     .reduce((acc, tx) => acc + tx.amount, 0);
 
   // Determine budget warnings
@@ -60,38 +62,15 @@ export default function HomeDashboard() {
   const absBalance = Math.abs(currentBalance);
   const isBalanceNegative = currentBalance < 0;
   
-  // Spend series for 7 consecutive days ending at latest recorded date
+  // Spend series for the current day and six calendar days before it.
   const weeklySpendSeries = useMemo(() => {
     const dailyMap = new Map();
-    const spendTx = transactions.filter((tx) => tx.negative);
-    let latestDate = spendTx.length > 0 ? new Date(spendTx[0].time) : new Date();
-
-    spendTx.forEach((tx) => {
-      const d = new Date(tx.time);
-      if (d > latestDate) latestDate = d;
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate()
-      ).padStart(2, '0')}`;
-      const prev = dailyMap.get(key) || 0;
-      dailyMap.set(key, prev + tx.amount);
+    transactions.filter((tx) => tx.negative).forEach((tx) => {
+      const key = localDateKey(tx.time);
+      if (key) dailyMap.set(key, (dailyMap.get(key) || 0) + Number(tx.amount || 0));
     });
-
-    const result = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(latestDate);
-      d.setDate(latestDate.getDate() - i);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-        d.getDate()
-      ).padStart(2, '0')}`;
-      result.push({
-        key,
-        label: d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-        total: dailyMap.get(key) || 0
-      });
-    }
-
-    return result;
-  }, [transactions]);
+    return getLastDays(7).map(({ key, label }) => ({ key, label, total: dailyMap.get(key) || 0 }));
+  }, [transactions, todayKey]);
 
   const weeklyMax = Math.max(...weeklySpendSeries.map((d) => d.total), 0);
   const spendRangeLabel =
@@ -321,7 +300,7 @@ export default function HomeDashboard() {
             </div>
             <p className="text-[11px] mt-3 text-[#595c5e] dark:text-slate-400">
               {weeklyMax > 0
-                ? 'Grafik ini menampilkan 7 tanggal pencatatan pengeluaran terakhir.'
+                ? 'Grafik ini menampilkan pengeluaran harian selama 7 hari kalender terakhir.'
                 : 'Belum ada data pencatatan pengeluaran.'}
             </p>
           </div>
