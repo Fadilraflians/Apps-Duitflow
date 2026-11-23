@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinanceContext } from '../context/FinanceContext';
 import BottomNavBar from '../components/BottomNavBar';
@@ -8,7 +8,7 @@ export default function Transactions() {
   const [activeChart, setActiveChart] = useState('income');
   const navigate = useNavigate();
   const accountLabel = (tx) =>
-    String(tx.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA';
+    tx.account_name || (String(tx.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA');
 
   const formatIDR = (value) =>
     new Intl.NumberFormat('id-ID', {

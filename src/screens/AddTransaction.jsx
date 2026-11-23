@@ -1,206 +1,181 @@
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { FinanceContext } from '../context/FinanceContext';
-import { AuthContext } from '../context/AuthContext';
+
+const categories = [
+  { name: 'Food', icon: 'restaurant' },
+  { name: 'Shopping', icon: 'shopping_bag' },
+  { name: 'Transport', icon: 'directions_car' },
+  { name: 'Bills', icon: 'receipt_long' },
+  { name: 'Leisure', icon: 'movie' },
+  { name: 'Income', icon: 'payments' }
+];
+
+const formatIDR = (value) => new Intl.NumberFormat('id-ID').format(value || 0);
+const newRequestId = () => globalThis.crypto?.randomUUID?.()
+  || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export default function AddTransaction() {
   const navigate = useNavigate();
-  const { addTransaction, currentBalance, monthlyIncome, monthlySpend } = useContext(FinanceContext);
-  const { user } = useContext(AuthContext);
-  const firstName = user?.full_name?.split(' ')?.[0] || user?.email?.split('@')?.[0] || 'Guest';
-
+  const { addTransaction, accounts } = useContext(FinanceContext);
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState({ name: 'Food', icon: 'restaurant' });
-  const [accountType, setAccountType] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [category, setCategory] = useState(categories[0]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [date, setDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const submitting = useRef(false);
+  const requestId = useRef(newRequestId());
 
-  const categories = [
-    { name: 'Food', icon: 'restaurant' },
-    { name: 'Shopping', icon: 'shopping_cart' },
-    { name: 'Transport', icon: 'directions_car' },
-    { name: 'Leisure', icon: 'theater_comedy' },
-    { name: 'Bills', icon: 'bolt' },
-    { name: 'Income', icon: 'payments' }
-  ];
+  useEffect(() => {
+    if (!selectedAccountId && accounts.length) setSelectedAccountId(String(accounts[0].id));
+  }, [accounts, selectedAccountId]);
 
-  const handleClose = () => {
-    navigate(-1);
-  };
+  const selectedAccount = accounts.find((account) => String(account.id) === selectedAccountId);
+  const isIncome = category.name === 'Income';
 
-  const handleSave = (e) => {
-    e.preventDefault();
-    if (!amount) return;
-    setError('');
-    if (!accountType) {
-      setError('Pilih sumber dana terlebih dahulu (Bank BCA / Cash)');
+  const handleSave = async (event) => {
+    event.preventDefault();
+    if (submitting.current) return;
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError('Masukkan jumlah yang lebih besar dari 0.');
       return;
     }
-    
-    // Add transaction logic
-    const isIncome = category.name === 'Income';
-    const normalizedAccountType = accountType === 'cash' ? 'cash' : 'bca';
+    if (!selectedAccount) {
+      setError('Pilih akun tujuan transaksi.');
+      return;
+    }
 
-    const newTx = {
-      id: Date.now(),
-      title: note || category.name,
-      time: new Date(date).toISOString(),
-      amount: parseFloat(amount),
+    submitting.current = true;
+    setIsSaving(true);
+    setError('');
+    const result = await addTransaction({
+      title: note.trim() || category.name,
+      time: new Date(`${date}T12:00:00`).toISOString(),
+      amount: parsedAmount,
       icon: category.icon,
       category: category.name,
       negative: !isIncome,
-      account_type: normalizedAccountType
-    };
-
-    addTransaction(newTx).then((result) => {
-      if (result?.ok) {
-        navigate('/home');
-      } else {
-        setError(result?.error || 'Gagal menyimpan transaksi');
-      }
+      account_id: selectedAccount.id,
+      account_type: selectedAccount.account_type,
+      account_name: selectedAccount.name,
+      request_id: requestId.current
     });
+
+    if (result?.ok) {
+      navigate('/home', { replace: true });
+      return;
+    }
+
+    setError(result?.error || 'Transaksi belum berhasil disimpan. Coba lagi.');
+    submitting.current = false;
+    setIsSaving(false);
   };
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen overflow-hidden">
-      {/* Background Dashboard (Dimmed) */}
-      <div className="fixed inset-0 z-0 brightness-[0.4] grayscale-[0.2] overflow-hidden bg-surface">
-        <header className="w-full top-0 sticky bg-[#f5f7f9] dark:bg-slate-950 flex justify-between items-center px-6 py-4 w-full">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden">
-              <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8FnDV5LgDPW8z0pjm6Qt8l0sZMKRyXAbvolEMcc6cxA2riikRSPcfJAAqWygJ5olGP8836HCmT4HkQtyYeDCmFxSzXOoGpWnSzHFRuYgMoFRUkbA8CYD3PKw-yv5NVq3YivKXb5TyCu66y3ksYEFNM6M-f1-H_2S2BFpV6KY9dFfrnfQV9n4JjIxc43mZXLc41rZZk5eSGUzeft6IFf_Iahj2g1YXliFFjCiWu2cz1Cz4_hJ825WIi1cv0ANjQBGsrWZBXF9kaXXq" alt="Profile" />
-            </div>
-            <span className="text-2xl font-bold text-[#006a2d] dark:text-[#6bff8f] tracking-tight">{firstName}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 text-slate-500 hover:bg-slate-200/50 rounded-full">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-          </div>
+    <div className="min-h-screen bg-slate-50 px-4 pb-10 pt-5 text-slate-900 dark:bg-slate-950 dark:text-slate-100 sm:px-6 sm:pt-8">
+      <main className="mx-auto max-w-2xl">
+        <header className="mb-6 flex items-center justify-between">
+          <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-emerald-700 dark:hover:bg-slate-900">
+            <span className="material-symbols-outlined">arrow_back</span> Kembali
+          </button>
+          <Link to="/money-details" className="text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-400">Kelola akun</Link>
         </header>
 
-        <main className="px-6 py-8 space-y-8 pointer-events-none">
-          <section className="space-y-1">
-            <p className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Available Wealth</p>
-            <h1 className="text-[2.2rem] sm:text-[3rem] font-headline font-extrabold tracking-tight leading-none text-primary">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(currentBalance)}</h1>
-          </section>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-surface-container-lowest p-6 rounded-xl space-y-3">
-              <span className="material-symbols-outlined text-primary text-3xl">trending_up</span>
-              <div>
-                <p className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Monthly Income</p>
-                <p className="text-xl font-headline font-bold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(monthlyIncome)}</p>
-              </div>
+        <form onSubmit={handleSave} className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
+          <div className={`px-6 pb-8 pt-7 text-white sm:px-9 ${isIncome ? 'bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-500' : 'bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950'}`}>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">Transaksi baru</p>
+            <div className="mt-6 flex items-end gap-3">
+              <span className="pb-2 text-lg font-semibold text-white/70">Rp</span>
+              <input
+                aria-label="Jumlah transaksi"
+                className="w-full min-w-0 border-0 bg-transparent p-0 text-4xl font-extrabold tracking-tight text-white placeholder:text-white/35 focus:ring-0 sm:text-5xl"
+                inputMode="numeric"
+                placeholder="0"
+                type="number"
+                min="1"
+                step="1"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                required
+              />
             </div>
-            <div className="bg-surface-container-lowest p-6 rounded-xl space-y-3">
-              <span className="material-symbols-outlined text-error text-3xl">trending_down</span>
-              <div>
-                <p className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Monthly Spend</p>
-                <p className="text-xl font-headline font-bold">{new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(monthlySpend)}</p>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-
-      {/* Bottom Sheet Modal */}
-      <div className="fixed inset-0 z-10 flex flex-col justify-end pointer-events-none">
-        
-        <div className="w-full flex justify-center mb-2 pointer-events-auto cursor-pointer" onClick={handleClose}>
-          <div className="w-12 h-1.5 bg-white/40 rounded-full"></div>
-        </div>
-
-        <div className="bg-surface-bright rounded-t-[2.5rem] p-8 pb-12 w-full max-h-[795px] overflow-y-auto shadow-[0_-12px_40px_rgba(0,0,0,0.15)] relative pointer-events-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-xl font-headline font-bold tracking-tight">New Transaction</h2>
-            <button onClick={handleClose} type="button" className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center">
-              <span className="material-symbols-outlined text-on-surface">close</span>
-            </button>
+            <p className="mt-2 text-sm text-white/70">{isIncome ? 'Pemasukan akan menambah saldo akun.' : 'Pengeluaran akan mengurangi saldo akun.'}</p>
           </div>
 
-          <form className="space-y-8" onSubmit={handleSave}>
-            {error && (
-              <div className="p-3 bg-error-container text-on-error-container rounded-xl text-sm font-bold text-center">
-                {error}
+          <div className="space-y-7 p-5 sm:p-9">
+            {error && <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</div>}
+
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">Kategori</h2>
+                <span className="text-xs text-slate-400">Pilih satu</span>
               </div>
-            )}
-            <div className="text-center space-y-2">
-              <p className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant">Enter Amount</p>
-              <div className="flex items-baseline justify-center gap-2">
-                <span className="text-2xl font-headline font-bold text-on-surface-variant">Rp</span>
-                <input 
-                  className="text-[4rem] font-headline font-extrabold tracking-tight bg-transparent border-none text-center focus:ring-0 w-full text-primary" 
-                  placeholder="0.00" 
-                  type="number" 
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                />
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {categories.map((item) => {
+                  const active = category.name === item.name;
+                  return (
+                    <button key={item.name} type="button" onClick={() => setCategory(item)} aria-pressed={active}
+                      className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3 text-xs font-semibold transition ${active ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
+                      <span className="material-symbols-outlined">{item.icon}</span>
+                      {item.name === 'Income' ? 'Pemasukan' : item.name}
+                    </button>
+                  );
+                })}
               </div>
+            </section>
+
+            <section>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-700 dark:text-slate-200">{isIncome ? 'Masuk ke akun' : 'Bayar dari akun'}</h2>
+                <Link to="/money-details" className="text-xs font-bold text-emerald-700 dark:text-emerald-400">+ Tambah akun</Link>
+              </div>
+              {accounts.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {accounts.map((account) => {
+                    const active = String(account.id) === selectedAccountId;
+                    return (
+                      <button key={account.id} type="button" onClick={() => setSelectedAccountId(String(account.id))} aria-pressed={active}
+                        className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${active ? 'border-emerald-600 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40' : 'border-slate-200 hover:border-emerald-300 dark:border-slate-700'}`}>
+                        <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${account.account_type === 'cash' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300' : account.account_type === 'ewallet' ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'}`}>
+                          <span className="material-symbols-outlined">{account.account_type === 'cash' ? 'payments' : account.account_type === 'ewallet' ? 'account_balance_wallet' : 'account_balance'}</span>
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">{account.name}</span>
+                          <span className="block text-xs text-slate-500">Saldo Rp {formatIDR(account.balance)}</span>
+                        </span>
+                        {active && <span className="material-symbols-outlined text-emerald-700 dark:text-emerald-400">check_circle</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center dark:border-slate-700">
+                  <p className="text-sm text-slate-500">Belum ada akun untuk transaksi.</p>
+                  <Link to="/money-details" className="mt-2 inline-block text-sm font-bold text-emerald-700 dark:text-emerald-400">Buat akun pertama</Link>
+                </div>
+              )}
+            </section>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-xs font-bold text-slate-500">
+                TANGGAL
+                <input className="mt-2 block w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+              </label>
+              <label className="block text-xs font-bold text-slate-500">
+                CATATAN
+                <input className="mt-2 block w-full rounded-2xl border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 placeholder:font-normal focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" placeholder="Contoh: Gaji bulanan" value={note} onChange={(event) => setNote(event.target.value)} />
+              </label>
             </div>
 
-            <div className="space-y-4">
-              <p className="font-label text-[0.6875rem] font-bold uppercase tracking-widest text-on-surface-variant px-1">Select Category</p>
-              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-8 px-8">
-                {categories.map(cat => (
-                  <button 
-                    key={cat.name} 
-                    onClick={() => setCategory(cat)}
-                    className="flex-shrink-0 flex flex-col items-center gap-2 group outline-none" 
-                    type="button"
-                  >
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${category.name === cat.name ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high'}`}>
-                      <span className="material-symbols-outlined" style={{ fontVariationSettings: category.name === cat.name ? "'FILL' 1" : "" }}>{cat.icon}</span>
-                    </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest ${category.name === cat.name ? 'text-primary' : 'text-on-surface-variant'}`}>{cat.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="relative">
-                <label className="absolute left-4 top-3 font-label text-[0.625rem] font-bold uppercase tracking-widest text-on-surface-variant">Sumber Dana</label>
-                <select
-                  className="w-full pt-8 pb-3 px-4 bg-surface-container-low border-none rounded-xl font-bold focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/10 transition-all"
-                  value={accountType}
-                  onChange={(e) => setAccountType(e.target.value)}
-                >
-                  <option value="" disabled>Pilih sumber dana</option>
-                  <option value="bca">Bank BCA</option>
-                  <option value="cash">Cash</option>
-                </select>
-              </div>
-              <div className="relative">
-                <label className="absolute left-4 top-3 font-label text-[0.625rem] font-bold uppercase tracking-widest text-on-surface-variant">Transaction Date</label>
-                <input 
-                  className="w-full pt-8 pb-3 px-4 bg-surface-container-low border-none rounded-xl font-bold focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/10 transition-all" 
-                  type="date" 
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </div>
-              <div className="relative">
-                <label className="absolute left-4 top-3 font-label text-[0.625rem] font-bold uppercase tracking-widest text-on-surface-variant">Add a Note</label>
-                <input 
-                  className="w-full pt-8 pb-3 px-4 bg-surface-container-low border-none rounded-xl font-bold focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/10 transition-all" 
-                  placeholder="What was this for?" 
-                  type="text" 
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <button className="w-full py-5 rounded-full bg-gradient-to-br from-primary to-primary-dim text-on-primary font-bold text-lg shadow-xl shadow-primary/20 active:scale-95 transition-transform" type="submit">
-              Save Transaction
+            <button disabled={isSaving || !accounts.length} type="submit" className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-5 py-4 font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60">
+              {isSaving ? <><span className="material-symbols-outlined animate-spin">progress_activity</span> Menyimpan…</> : <>Simpan {isIncome ? 'Pemasukan' : 'Transaksi'}<span className="material-symbols-outlined">arrow_forward</span></>}
             </button>
-          </form>
-        </div>
-      </div>
+          </div>
+        </form>
+      </main>
     </div>
   );
 }

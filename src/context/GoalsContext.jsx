@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext } from 'react';
 import { AuthContext } from './AuthContext';
 
 export const GoalsContext = createContext();
@@ -67,7 +67,8 @@ export const GoalsProvider = ({ children }) => {
           const walletData = await walletRes.json();
           const bca = parseFloat(walletData.bca_balance || 0);
           const cash = parseFloat(walletData.cash_balance || 0);
-          if (parsedAmount > bca + cash) {
+          const available = Number(walletData.total_balance ?? (bca + cash));
+          if (parsedAmount > available) {
             return { ok: false, error: 'Saldo tidak cukup untuk add funds' };
           }
         }

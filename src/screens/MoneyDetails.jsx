@@ -1,134 +1,128 @@
-import React, { useContext, useMemo } from 'react';
+import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
 
+const formatIDR = (value) => new Intl.NumberFormat('id-ID', {
+  style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0
+}).format(value || 0);
+
+const accountIcons = { bank: 'account_balance', cash: 'payments', ewallet: 'account_balance_wallet' };
+
 export default function MoneyDetails() {
   const navigate = useNavigate();
-  const { wallet, transactions } = useContext(FinanceContext);
+  const { accounts, currentBalance, addAccount } = useContext(FinanceContext);
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState('');
+  const [accountType, setAccountType] = useState('bank');
+  const [initialBalance, setInitialBalance] = useState('0');
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const formatIDR = (value) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(value || 0);
-
-  const { bcaAmount, cashAmount, totalAmount } = useMemo(() => {
-    const walletBca = parseFloat(wallet?.bca_balance || 0);
-    const walletCash = parseFloat(wallet?.cash_balance || 0);
-    const walletTotal = walletBca + walletCash;
-
-    if (walletTotal <= 0 && transactions.length > 0) {
-      let txBca = 0;
-      let txCash = 0;
-      transactions.forEach((tx) => {
-        const account = String(tx?.account_type || '').trim().toLowerCase() === 'cash' ? 'cash' : 'bca';
-        const delta = tx.negative ? -tx.amount : tx.amount;
-        if (account === 'cash') txCash += delta;
-        else txBca += delta;
-      });
-
-      return {
-        bcaAmount: Math.round(Math.max(0, txBca)),
-        cashAmount: Math.round(Math.max(0, txCash)),
-        totalAmount: Math.round(Math.max(0, txBca + txCash))
-      };
+  const handleAddAccount = async (event) => {
+    event.preventDefault();
+    if (saving) return;
+    setError('');
+    setSaving(true);
+    const result = await addAccount({
+      name,
+      account_type: accountType,
+      initial_balance: Number(initialBalance || 0)
+    });
+    setSaving(false);
+    if (!result?.ok) {
+      setError(result?.error || 'Akun belum berhasil ditambahkan.');
+      return;
     }
-
-    return {
-      bcaAmount: Math.round(Math.max(0, walletBca)),
-      cashAmount: Math.round(Math.max(0, walletCash)),
-      totalAmount: Math.round(Math.max(0, walletTotal))
-    };
-  }, [wallet, transactions]);
+    setName('');
+    setInitialBalance('0');
+    setShowForm(false);
+  };
 
   return (
-    <div className="bg-[#f5f7f9] dark:bg-slate-950 min-h-screen pb-28 text-[#2c2f31] dark:text-slate-100">
-      <header className="w-full top-0 sticky z-50 bg-[#f5f7f9]/90 dark:bg-slate-950/90 backdrop-blur border-b border-slate-200/60 dark:border-slate-800 flex items-center justify-between px-6 py-4">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-[#006a2d]"
-        >
-          <span className="material-symbols-outlined text-base">arrow_back</span>
-          Back
+    <div className="min-h-screen bg-slate-50 pb-28 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200/70 bg-white/90 px-5 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90 sm:px-8">
+        <button type="button" onClick={() => navigate(-1)} className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-emerald-700 dark:hover:bg-slate-900">
+          <span className="material-symbols-outlined">arrow_back</span> Kembali
         </button>
-        <h1 className="font-['Plus_Jakarta_Sans'] font-bold text-sm tracking-[0.18em] text-[#006a2d] dark:text-[#6bff8f]">
-          DETAIL UANG SAYA
-        </h1>
-        <span className="w-6" />
+        <h1 className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-800 dark:text-emerald-300 sm:text-sm">Akun & Saldo</h1>
+        <span className="w-20" />
       </header>
 
-      <main className="px-6 mt-5 max-w-2xl mx-auto space-y-4">
-        {/* Hero Balance Banner */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#0c5931] via-[#0b8f4a] to-[#0fd26c] dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-white rounded-3xl p-8 shadow-[0_16px_40px_rgba(11,143,74,0.3)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)] group">
-          {/* Decorative Glows */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-110 transition-transform duration-700 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
-          <div className="absolute top-1/2 left-1/2 w-full h-full bg-emerald-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="material-symbols-outlined text-emerald-200/80 text-sm">account_balance_wallet</span>
-              <p className="text-[10px] uppercase tracking-[0.25em] font-bold text-emerald-100/90 dark:text-slate-400">Total Uang Saya</p>
+      <main className="mx-auto max-w-3xl space-y-5 px-4 pt-6 sm:px-6 sm:pt-9">
+        <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-800 via-emerald-700 to-teal-500 p-6 text-white shadow-xl shadow-emerald-900/15 sm:p-9">
+          <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-emerald-100">
+              <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
+              <p className="text-xs font-bold uppercase tracking-[0.2em]">Total saldo</p>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-extrabold tracking-tighter drop-shadow-md mb-2">
-              {formatIDR(Math.max(totalAmount, 0))}
-            </h2>
-            <div className="inline-flex items-center gap-2 bg-black/10 dark:bg-black/20 backdrop-blur-sm border border-white/10 px-3 py-1.5 rounded-full mt-2">
-               <span className="material-symbols-outlined text-emerald-200 text-xs">info</span>
-               <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-50 dark:text-slate-300">Ringkasan dana yang bisa dipakai</p>
-            </div>
+            <p className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">{formatIDR(currentBalance)}</p>
+            <p className="mt-2 text-sm text-emerald-50/80">Tersebar di {accounts.length} akun</p>
           </div>
         </section>
 
-        {/* Detailed Accounts List */}
-        <section className="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/50 dark:border-slate-800 shadow-[0_8px_30px_rgba(0,0,0,0.03)] dark:shadow-none space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0b8f4a] to-emerald-300 opacity-50"></div>
-          <h3 className="font-['Plus_Jakarta_Sans'] font-bold text-base text-slate-800 dark:text-slate-200 mb-2">Rincian Akun</h3>
-          
-          <div className="group flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-950/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined">account_balance</span>
-              </div>
-              <div>
-                <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-slate-900 dark:text-slate-100">Bank BCA</p>
-                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md mt-1 inline-block">Tabungan utama</p>
-              </div>
+        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-extrabold">Akun saya</h2>
+              <p className="mt-1 text-sm text-slate-500">Bank, uang tunai, dan dompet digital.</p>
             </div>
-            <div className="w-full sm:w-auto relative">
-              <p className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-colors group-hover:border-blue-200 dark:group-hover:border-blue-800">
-                {formatIDR(bcaAmount)}
-              </p>
-            </div>
+            <button type="button" onClick={() => { setShowForm((value) => !value); setError(''); }} className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-900/10 transition hover:bg-emerald-800">
+              <span className="material-symbols-outlined text-lg">add</span><span className="hidden sm:inline">Tambah akun</span>
+            </button>
           </div>
-          
-          <div className="w-full h-px bg-slate-100 dark:bg-slate-800/60"></div>
 
-          <div className="group flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700/50 gap-4">
-            <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-950/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined">payments</span>
-              </div>
+          {showForm && (
+            <form onSubmit={handleAddAccount} className="mb-5 space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20 sm:p-5">
               <div>
-                <p className="font-['Plus_Jakarta_Sans'] font-bold text-sm text-slate-900 dark:text-slate-100">Cash</p>
-                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md mt-1 inline-block">Uang tunai</p>
+                <h3 className="font-bold">Akun baru</h3>
+                <p className="mt-1 text-xs text-slate-500">Masukkan saldo awal agar total saldo langsung sesuai.</p>
               </div>
-            </div>
-            <div className="w-full sm:w-auto relative">
-              <p className="w-full sm:w-48 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-right font-['Plus_Jakarta_Sans'] font-bold text-slate-900 dark:text-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-colors group-hover:border-amber-200 dark:group-hover:border-amber-800">
-                {formatIDR(cashAmount)}
-              </p>
-            </div>
+              {error && <div role="alert" className="rounded-xl bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">{error}</div>}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-bold text-slate-500">
+                  NAMA AKUN
+                  <input autoFocus className="mt-2 block w-full rounded-xl border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Contoh: Bank Mandiri" value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required />
+                </label>
+                <label className="text-xs font-bold text-slate-500">
+                  JENIS AKUN
+                  <select className="mt-2 block w-full rounded-xl border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={accountType} onChange={(event) => setAccountType(event.target.value)}>
+                    <option value="bank">Rekening bank</option>
+                    <option value="cash">Uang tunai</option>
+                    <option value="ewallet">Dompet digital</option>
+                  </select>
+                </label>
+              </div>
+              <label className="block text-xs font-bold text-slate-500">
+                SALDO AWAL (RP)
+                <input className="mt-2 block w-full rounded-xl border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" type="number" min="0" step="1" value={initialBalance} onChange={(event) => setInitialBalance(event.target.value)} required />
+              </label>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => { setShowForm(false); setError(''); }} className="rounded-xl px-4 py-3 text-sm font-bold text-slate-500 hover:bg-white dark:hover:bg-slate-900">Batal</button>
+                <button disabled={saving} type="submit" className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-800 disabled:opacity-60">{saving ? 'Menyimpan…' : 'Simpan akun'}</button>
+              </div>
+            </form>
+          )}
+
+          <div className="space-y-3">
+            {accounts.map((account) => (
+              <article key={account.id} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition hover:border-emerald-200 hover:bg-emerald-50/40 dark:border-slate-800 dark:bg-slate-950/50 dark:hover:border-emerald-900">
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${account.account_type === 'cash' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : account.account_type === 'ewallet' ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'}`}>
+                  <span className="material-symbols-outlined">{accountIcons[account.account_type] || accountIcons.bank}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold">{account.name}</p>
+                  <p className="mt-1 text-xs capitalize text-slate-500">{account.account_type === 'ewallet' ? 'Dompet digital' : account.account_type === 'cash' ? 'Uang tunai' : 'Rekening bank'}</p>
+                </div>
+                <p className="text-right text-sm font-extrabold sm:text-base">{formatIDR(account.balance)}</p>
+              </article>
+            ))}
+            {!accounts.length && <p className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">Akun sedang dimuat atau belum tersedia.</p>}
           </div>
         </section>
       </main>
-
       <BottomNavBar />
     </div>
   );
 }
-

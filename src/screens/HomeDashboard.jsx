@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
@@ -10,7 +10,7 @@ export default function HomeDashboard() {
   const { goals } = useContext(GoalsContext);
   const { user, updateUserLimit } = useContext(AuthContext);
   const accountLabel = (tx) =>
-    String(tx.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA';
+    tx.account_name || (String(tx.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA');
 
   const formatIDR = (value) => {
     return new Intl.NumberFormat('id-ID', {

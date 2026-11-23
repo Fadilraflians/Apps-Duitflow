@@ -101,6 +101,16 @@ const ensureSchema = () => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS accounts (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name VARCHAR(100) NOT NULL,
+          account_type VARCHAR(20) NOT NULL DEFAULT 'bank',
+          balance NUMERIC(15,2) NOT NULL DEFAULT 0,
+          legacy_key VARCHAR(30),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE (user_id, legacy_key)
+        );
         CREATE TABLE IF NOT EXISTS transactions (
           id SERIAL PRIMARY KEY,
           title VARCHAR(255) NOT NULL,
@@ -112,6 +122,12 @@ const ensureSchema = () => {
           user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
           account_type VARCHAR(50) DEFAULT 'bca'
         );
+        ALTER TABLE transactions
+          ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;
+        ALTER TABLE transactions
+          ADD COLUMN IF NOT EXISTS request_id VARCHAR(100);
+        CREATE UNIQUE INDEX IF NOT EXISTS transactions_user_request_unique
+          ON transactions (user_id, request_id);
         CREATE TABLE IF NOT EXISTS goals (
           id SERIAL PRIMARY KEY,
           user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -123,6 +139,21 @@ const ensureSchema = () => {
           is_priority BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+      `);
+      await pool.query(`
+        INSERT INTO accounts (user_id, name, account_type, balance, legacy_key)
+        SELECT user_id, 'Bank BCA', 'bank', bca_balance, 'bca'
+        FROM user_wallets
+        ON CONFLICT (user_id, legacy_key) DO NOTHING;
+        INSERT INTO accounts (user_id, name, account_type, balance, legacy_key)
+        SELECT user_id, 'Cash', 'cash', cash_balance, 'cash'
+        FROM user_wallets
+        ON CONFLICT (user_id, legacy_key) DO NOTHING;
+        UPDATE transactions t SET account_id = a.id
+        FROM accounts a
+        WHERE t.account_id IS NULL
+          AND t.user_id = a.user_id
+          AND t.account_type = a.legacy_key;
       `);
     })().catch((error) => { schemaReady = null; throw error; });
   }
@@ -165,6 +196,11 @@ app.post('/api/register', async (req, res) => {
     await connection.execute(
       'INSERT INTO user_wallets (user_id, bca_balance, cash_balance) VALUES (?, 0, 0)',
       [result.insertId]
+    );
+    await connection.execute(
+      `INSERT INTO accounts (user_id, name, account_type, balance, legacy_key)
+       VALUES (?, 'Bank BCA', 'bank', 0, 'bca'), (?, 'Cash', 'cash', 0, 'cash')`,
+      [result.insertId, result.insertId]
     );
     
     await connection.end();
@@ -253,12 +289,18 @@ app.get('/api/wallets', async (req, res) => {
       'SELECT bca_balance, cash_balance FROM user_wallets WHERE user_id = ? LIMIT 1',
       [userId]
     );
+    const [accounts] = await connection.execute(
+      'SELECT id, name, account_type, balance, legacy_key, created_at FROM accounts WHERE user_id = ? ORDER BY created_at, id',
+      [userId]
+    );
     await connection.end();
 
     const wallet = rows[0] || { bca_balance: 0, cash_balance: 0 };
     res.json({
       bca_balance: parseFloat(wallet.bca_balance || 0),
-      cash_balance: parseFloat(wallet.cash_balance || 0)
+      cash_balance: parseFloat(wallet.cash_balance || 0),
+      total_balance: accounts.reduce((sum, account) => sum + parseFloat(account.balance || 0), 0),
+      accounts: accounts.map((account) => ({ ...account, balance: parseFloat(account.balance || 0) }))
     });
   } catch (error) {
     console.error(error);
@@ -290,6 +332,51 @@ app.put('/api/wallets', async (req, res) => {
   }
 });
 
+app.post('/api/accounts', async (req, res) => {
+  let connection;
+  try {
+    const { user_id, name, account_type = 'bank', initial_balance = 0 } = req.body;
+    const trimmedName = String(name || '').trim();
+    const normalizedType = String(account_type || 'bank').trim().toLowerCase();
+    const balance = Number(initial_balance || 0);
+    if (!user_id) return res.status(400).json({ error: 'User ID is required' });
+    if (!trimmedName) return res.status(400).json({ error: 'Account name is required' });
+    if (!['bank', 'cash', 'ewallet'].includes(normalizedType)) {
+      return res.status(400).json({ error: 'Account type is invalid' });
+    }
+    if (!Number.isFinite(balance) || balance < 0) {
+      return res.status(400).json({ error: 'Initial balance must be zero or more' });
+    }
+
+    connection = await getConnection();
+    const [existing] = await connection.execute(
+      'SELECT id FROM accounts WHERE user_id = ? AND LOWER(name) = LOWER(?) LIMIT 1',
+      [user_id, trimmedName]
+    );
+    if (existing.length) {
+      await connection.end();
+      connection = null;
+      return res.status(409).json({ error: 'An account with this name already exists' });
+    }
+
+    const [result] = await connection.execute(
+      'INSERT INTO accounts (user_id, name, account_type, balance) VALUES (?, ?, ?, ?)',
+      [user_id, trimmedName, normalizedType, balance]
+    );
+    const [created] = await connection.execute(
+      'SELECT id, name, account_type, balance, legacy_key, created_at FROM accounts WHERE id = ?',
+      [result.insertId]
+    );
+    await connection.end();
+    connection = null;
+    res.status(201).json({ ...created[0], balance: parseFloat(created[0].balance || 0) });
+  } catch (error) {
+    console.error(error);
+    if (connection) await connection.end().catch(() => {});
+    res.status(500).json({ error: 'Database error while creating account' });
+  }
+});
+
 // --- TRANSACTION ROUTES ---
 
 app.get('/api/transactions', async (req, res) => {
@@ -299,14 +386,18 @@ app.get('/api/transactions', async (req, res) => {
 
     const connection = await getConnection();
     const [rows] = await connection.execute(
-      'SELECT * FROM transactions WHERE user_id = ? ORDER BY time DESC, id DESC',
+      `SELECT t.*, a.name AS account_name, a.account_type AS account_kind
+       FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id
+       WHERE t.user_id = ? ORDER BY t.time DESC, t.id DESC`,
       [userId]
     );
     
     const formattedRows = rows.map(r => ({
       ...r,
       negative: Boolean(r.negative),
-      account_type: String(r.account_type || '').trim().toLowerCase() === 'cash' ? 'cash' : 'bca'
+      account_type: r.account_kind || (String(r.account_type || '').trim().toLowerCase() === 'cash' ? 'cash' : 'bank'),
+      account_id: r.account_id || null,
+      account_name: r.account_name || (String(r.account_type || '').trim().toLowerCase() === 'cash' ? 'Cash' : 'Bank BCA')
     }));
     
     await connection.end();
@@ -320,61 +411,80 @@ app.get('/api/transactions', async (req, res) => {
 app.post('/api/transactions', async (req, res) => {
   let connection;
   try {
-    const { user_id, title, time, amount, icon, category, negative, account_type } = req.body;
+    const { user_id, title, time, amount, icon, category, negative, account_type, account_id, request_id } = req.body;
     if (!user_id) return res.status(400).json({ error: 'User ID is required' });
     const parsedAmount = parseFloat(amount || 0);
     if (!parsedAmount || parsedAmount <= 0) {
       return res.status(400).json({ error: 'Amount must be greater than 0' });
     }
 
-    const account = String(account_type || '').trim().toLowerCase() === 'cash' ? 'cash' : 'bca';
-
     connection = await getConnection();
     await connection.beginTransaction();
     const transactionTime = new Date(time).toISOString();
 
-    const [result] = await connection.execute(
-      'INSERT INTO transactions (user_id, title, time, amount, icon, category, negative, account_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [user_id, title, transactionTime, parsedAmount, icon, category, Boolean(negative), account]
-    );
-
-    const [walletRows] = await connection.execute(
-      'SELECT bca_balance, cash_balance FROM user_wallets WHERE user_id = ? LIMIT 1',
-      [user_id]
-    );
-
-    if (walletRows.length === 0) {
-      await connection.execute(
-        'INSERT INTO user_wallets (user_id, bca_balance, cash_balance) VALUES (?, 0, 0)',
-        [user_id]
+    if (request_id) {
+      const [existing] = await connection.execute(
+        `SELECT t.*, a.name AS account_name, a.account_type AS account_kind
+         FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id
+         WHERE t.user_id = ? AND t.request_id = ? LIMIT 1`,
+        [user_id, request_id]
       );
-      walletRows.push({ bca_balance: 0, cash_balance: 0 });
+      if (existing.length) {
+        await connection.commit();
+        await connection.end();
+        connection = null;
+        const saved = existing[0];
+        return res.json({ ...saved, amount: parseFloat(saved.amount), negative: Boolean(saved.negative), duplicate: true });
+      }
     }
 
-    const wallet = walletRows[0];
-    const currentAccountBalance = parseFloat(
-      account === 'cash' ? wallet.cash_balance : wallet.bca_balance
-    );
-    const nextBalance = negative ? currentAccountBalance - parsedAmount : currentAccountBalance + parsedAmount;
+    const selectedAccount = account_id
+      ? (await connection.execute(
+          'SELECT id, user_id, name, account_type, balance, legacy_key FROM accounts WHERE id = ? AND user_id = ? FOR UPDATE',
+          [account_id, user_id]
+        ))[0]
+      : (await connection.execute(
+          'SELECT id, user_id, name, account_type, balance, legacy_key FROM accounts WHERE user_id = ? AND legacy_key = ? FOR UPDATE LIMIT 1',
+          [user_id, String(account_type || '').toLowerCase() === 'cash' ? 'cash' : 'bca']
+        ))[0];
+    const account = selectedAccount[0];
+    if (!account) {
+      await connection.rollback();
+      await connection.end();
+      connection = null;
+      return res.status(400).json({ error: 'Pilih akun yang terdaftar untuk transaksi ini' });
+    }
 
+    const currentAccountBalance = parseFloat(account.balance || 0);
+    const nextBalance = negative ? currentAccountBalance - parsedAmount : currentAccountBalance + parsedAmount;
     if (nextBalance < 0) {
       await connection.rollback();
       await connection.end();
-      return res.status(400).json({
-        error: `Saldo ${account.toUpperCase()} tidak cukup untuk transaksi ini`
-      });
+      connection = null;
+      return res.status(400).json({ error: `Saldo ${account.name} tidak cukup untuk transaksi ini` });
     }
 
-    if (account === 'cash') {
-      await connection.execute(
-        'UPDATE user_wallets SET cash_balance = ? WHERE user_id = ?',
-        [nextBalance, user_id]
+    const [result] = await connection.execute(
+      `INSERT INTO transactions (user_id, title, time, amount, icon, category, negative, account_type, account_id, request_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, request_id) DO NOTHING`,
+      [user_id, title, transactionTime, parsedAmount, icon, category, Boolean(negative), account.account_type, account.id, request_id || null]
+    );
+    if (!result.insertId) {
+      const [duplicate] = await connection.execute(
+        'SELECT * FROM transactions WHERE user_id = ? AND request_id = ? LIMIT 1',
+        [user_id, request_id]
       );
-    } else {
-      await connection.execute(
-        'UPDATE user_wallets SET bca_balance = ? WHERE user_id = ?',
-        [nextBalance, user_id]
-      );
+      await connection.commit();
+      await connection.end();
+      connection = null;
+      return res.json({ ...duplicate[0], amount: parseFloat(duplicate[0].amount), negative: Boolean(duplicate[0].negative), duplicate: true });
+    }
+
+    await connection.execute('UPDATE accounts SET balance = ? WHERE id = ?', [nextBalance, account.id]);
+    if (account.legacy_key === 'cash') {
+      await connection.execute('UPDATE user_wallets SET cash_balance = ? WHERE user_id = ?', [nextBalance, user_id]);
+    } else if (account.legacy_key === 'bca') {
+      await connection.execute('UPDATE user_wallets SET bca_balance = ? WHERE user_id = ?', [nextBalance, user_id]);
     }
 
     await connection.commit();
@@ -388,8 +498,11 @@ app.post('/api/transactions', async (req, res) => {
       amount: parsedAmount,
       icon,
       category,
-      negative,
-      account_type: account
+      negative: Boolean(negative),
+      account_type: account.account_type,
+      account_id: account.id,
+      account_name: account.name,
+      request_id
     });
   } catch (error) {
     console.error(error);
@@ -486,14 +599,14 @@ app.put('/api/goals/:id', async (req, res) => {
       return res.status(403).json({ error: 'Goal does not belong to this user' });
     }
 
-    const [walletRows] = await connection.execute(
-      'SELECT bca_balance, cash_balance FROM user_wallets WHERE user_id = ? LIMIT 1',
+    const [accountRows] = await connection.execute(
+      `SELECT id, name, account_type, balance, legacy_key FROM accounts
+       WHERE user_id = ?
+       ORDER BY CASE WHEN legacy_key = 'bca' THEN 0 WHEN legacy_key = 'cash' THEN 1 ELSE 2 END, id
+       FOR UPDATE`,
       [user_id]
     );
-    const wallet = walletRows[0] || { bca_balance: 0, cash_balance: 0 };
-    const bcaBalance = parseFloat(wallet.bca_balance || 0);
-    const cashBalance = parseFloat(wallet.cash_balance || 0);
-    const totalBalance = bcaBalance + cashBalance;
+    const totalBalance = accountRows.reduce((sum, account) => sum + parseFloat(account.balance || 0), 0);
 
     if (parsedAmount > totalBalance) {
       await connection.rollback();
@@ -502,17 +615,23 @@ app.put('/api/goals/:id', async (req, res) => {
       return res.status(400).json({ error: 'Saldo tidak cukup untuk add funds' });
     }
 
-    // Deduct from BCA first, then cash for any remainder.
-    const bcaDeduction = Math.min(bcaBalance, parsedAmount);
-    const remaining = parsedAmount - bcaDeduction;
-    const cashDeduction = Math.min(cashBalance, remaining);
-    const nextBca = bcaBalance - bcaDeduction;
-    const nextCash = cashBalance - cashDeduction;
-
-    await connection.execute(
-      'UPDATE user_wallets SET bca_balance = ?, cash_balance = ? WHERE user_id = ?',
-      [nextBca, nextCash, user_id]
-    );
+    let remaining = parsedAmount;
+    const nextAccounts = [];
+    for (const account of accountRows) {
+      const balance = parseFloat(account.balance || 0);
+      const deduction = Math.min(balance, remaining);
+      const nextBalance = balance - deduction;
+      remaining -= deduction;
+      if (deduction > 0) {
+        await connection.execute('UPDATE accounts SET balance = ? WHERE id = ?', [nextBalance, account.id]);
+        if (account.legacy_key === 'bca') {
+          await connection.execute('UPDATE user_wallets SET bca_balance = ? WHERE user_id = ?', [nextBalance, user_id]);
+        } else if (account.legacy_key === 'cash') {
+          await connection.execute('UPDATE user_wallets SET cash_balance = ? WHERE user_id = ?', [nextBalance, user_id]);
+        }
+      }
+      nextAccounts.push({ ...account, balance: nextBalance });
+    }
     await connection.execute(
       'UPDATE goals SET saved_amount = saved_amount + ? WHERE id = ?',
       [parsedAmount, goalId]
@@ -538,8 +657,10 @@ app.put('/api/goals/:id', async (req, res) => {
         saved_amount: parseFloat(updatedGoal.saved_amount || 0)
       },
       wallet: {
-        bca_balance: parseFloat(nextBca || 0),
-        cash_balance: parseFloat(nextCash || 0)
+        accounts: nextAccounts,
+        total_balance: nextAccounts.reduce((sum, account) => sum + account.balance, 0),
+        bca_balance: parseFloat(nextAccounts.find((account) => account.legacy_key === 'bca')?.balance || 0),
+        cash_balance: parseFloat(nextAccounts.find((account) => account.legacy_key === 'cash')?.balance || 0)
       }
     });
   } catch (error) {
