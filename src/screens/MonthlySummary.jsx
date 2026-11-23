@@ -1,4 +1,5 @@
 import { useContext, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FinanceContext } from '../context/FinanceContext';
 import BottomNavBar from '../components/BottomNavBar';
 import { localMonthKey } from '../utils/dates';
@@ -28,6 +29,8 @@ export default function MonthlySummary() {
   const monthTransactions = useMemo(() => transactions
     .filter((tx) => localMonthKey(tx.time) === selectedMonth)
     .sort((a, b) => new Date(b.time) - new Date(a.time)), [transactions, selectedMonth]);
+  const incomeTransactions = monthTransactions.filter((tx) => !tx.negative);
+  const expenseTransactions = monthTransactions.filter((tx) => tx.negative);
 
   const summary = useMemo(() => monthTransactions.reduce((totals, tx) => {
     const amount = Number(tx.amount) || 0;
@@ -98,18 +101,24 @@ export default function MonthlySummary() {
           </div> : <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Belum ada pengeluaran untuk {monthLabel(selectedMonth)}.</p>}
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
-          <div className="mb-4"><h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Transaksi bulan ini</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Daftar transaksi yang dihitung dalam ringkasan</p></div>
-          {monthTransactions.length ? <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {monthTransactions.map((tx) => <article key={tx.id} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
+        {[
+          { title: 'Uang masuk', type: 'income', items: incomeTransactions },
+          { title: 'Uang keluar', type: 'spend', items: expenseTransactions }
+        ].map(({ title, type, items }) => <section key={type} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div><h2 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">{title} bulan ini</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{items.length} transaksi · {monthLabel(selectedMonth)}</p></div>
+            <Link to={`/cashflow-details/${type}?month=${selectedMonth}`} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-extrabold uppercase tracking-wider ${type === 'income' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'}`}>Lihat semua</Link>
+          </div>
+          {items.length ? <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {items.slice(0, 5).map((tx) => <article key={tx.id} className="flex items-center justify-between gap-4 py-4 first:pt-1 last:pb-1">
               <div className="flex min-w-0 items-center gap-3">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tx.negative ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'}`}><span className="material-symbols-outlined">{tx.icon || (tx.negative ? 'north_east' : 'south_west')}</span></span>
                 <div className="min-w-0"><p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{tx.title}</p><p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{tx.category} · {tx.account_name || 'Akun'} · {new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(new Date(tx.time))}</p></div>
               </div>
               <p className={`shrink-0 text-sm font-extrabold ${tx.negative ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{tx.negative ? '−' : '+'}{formatIDR(tx.amount)}</p>
             </article>)}
-          </div> : <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Belum ada transaksi untuk {monthLabel(selectedMonth)}.</p>}
-        </section>
+          </div> : <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Belum ada transaksi {title.toLowerCase()} untuk {monthLabel(selectedMonth)}.</p>}
+        </section>)}
       </main>
       <BottomNavBar />
     </div>

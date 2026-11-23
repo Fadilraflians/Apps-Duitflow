@@ -1,10 +1,13 @@
 import React, { useContext, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import BottomNavBar from '../components/BottomNavBar';
 import { FinanceContext } from '../context/FinanceContext';
+import { localMonthKey } from '../utils/dates';
 
 export default function CashflowDetails() {
   const { type } = useParams();
+  const [searchParams] = useSearchParams();
+  const month = searchParams.get('month');
   const navigate = useNavigate();
   const { transactions } = useContext(FinanceContext);
   const mode = type === 'spend' ? 'spend' : 'income';
@@ -20,9 +23,10 @@ export default function CashflowDetails() {
   const filtered = useMemo(
     () =>
       [...transactions]
-        .filter((tx) => (mode === 'spend' ? tx.negative : !tx.negative))
+        .filter((tx) => (mode === 'spend' ? tx.negative : !tx.negative)
+          && (!month || localMonthKey(tx.time) === month))
         .sort((a, b) => new Date(b.time) - new Date(a.time)),
-    [transactions, mode]
+    [transactions, mode, month]
   );
 
   return (
@@ -37,7 +41,7 @@ export default function CashflowDetails() {
           Back
         </button>
         <h1 className="font-['Plus_Jakarta_Sans'] font-bold text-sm tracking-[0.18em] text-[#006a2d] dark:text-[#6bff8f]">
-          DETAIL {mode.toUpperCase()}
+          SEMUA UANG {mode === 'income' ? 'MASUK' : 'KELUAR'}{month ? ` · ${month}` : ''}
         </h1>
         <span className="w-6" />
       </header>
