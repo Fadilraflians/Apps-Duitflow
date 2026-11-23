@@ -12,6 +12,7 @@ import Transactions from './screens/Transactions';
 import MoneyDetails from './screens/MoneyDetails';
 import CashflowDetails from './screens/CashflowDetails';
 import { useTheme } from './context/ThemeContext';
+import MonthlySummary from './screens/MonthlySummary';
 
 function App() {
   const { theme, toggleTheme } = useTheme();
@@ -35,6 +36,7 @@ function App() {
       <Route path="/goals" element={<Goals />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/transactions" element={<Transactions />} />
+      <Route path="/monthly-summary" element={<MonthlySummary />} />
       <Route path="/money-details" element={<MoneyDetails />} />
       <Route path="/cashflow-details/:type" element={<CashflowDetails />} />
       <Route path="/login" element={<Login />} />
