@@ -132,7 +132,8 @@ app.use(async (_req, res, next) => {
     res.status(503).json({
       error: 'Database is unavailable or schema setup failed',
       diagnostic: error.code || 'DB_INIT_FAILED',
-      config: databaseUrl ? 'DATABASE_URL' : process.env.DB_PASSWORD ? 'DB_PASSWORD' : 'missing'
+      config: databaseUrl ? 'DATABASE_URL' : process.env.DB_PASSWORD ? 'DB_PASSWORD' : 'missing',
+      target: databaseUrl ? new URL(databaseUrl).hostname : dbHost || null
     });
   }
 });
