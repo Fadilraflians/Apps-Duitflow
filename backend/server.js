@@ -129,7 +129,11 @@ app.use(async (_req, res, next) => {
   try { await ensureSchema(); next(); }
   catch (error) {
     console.error('Database initialization failed:', error.message);
-    res.status(503).json({ error: 'Database is unavailable or schema setup failed' });
+    res.status(503).json({
+      error: 'Database is unavailable or schema setup failed',
+      diagnostic: error.code || 'DB_INIT_FAILED',
+      config: databaseUrl ? 'DATABASE_URL' : process.env.DB_PASSWORD ? 'DB_PASSWORD' : 'missing'
+    });
   }
 });
 
