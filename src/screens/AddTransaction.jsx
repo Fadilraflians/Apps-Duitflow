@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../components/AppShell';
-import { Alert, Card, EmptyState, Icon } from '../components/ui';
+import { Alert, Card, DateField, EmptyState, Icon } from '../components/ui';
 import AmountInput, { parseAmount } from '../components/AmountInput';
 import { FinanceContext } from '../context/FinanceContext';
 import { accountMeta, CATEGORIES, formatIDR } from '../utils/format';
@@ -185,7 +185,7 @@ export default function AddTransaction() {
         <Card className="card-pad grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="label">Tanggal</span>
-            <input className="field" type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+            <DateField value={date} onChange={setDate} required aria-label="Tanggal transaksi" />
           </label>
           <label className="block">
             <span className="label">Catatan <span className="font-normal text-ink-3">(opsional)</span></span>
